@@ -3,12 +3,16 @@ import {Map, View} from 'ol';
 import TileLayer from 'ol/layer/Tile';
 import VectorSource from 'ol/source/Vector';
 import VectorLayer from 'ol/layer/Vector';
-import OSM from 'ol/source/OSM';
+import VectorTileLayer from 'ol/layer/VectorTile';
+import VectorTileSource from 'ol/source/VectorTile';
 import LayerGroup from 'ol/layer/Group';
 import LayerSwitcher from 'ol-layerswitcher';
 import TileWMS from 'ol/source/TileWMS';
 import {Draw, Modify, Snap, Select, Translate} from 'ol/interaction';
 import {Circle as CircleStyle, Fill, Stroke, Style} from 'ol/style';
+import MVT from 'ol/format/MVT';
+
+
 
 
 function initMap(){
@@ -41,12 +45,15 @@ function initMap(){
         'title' : 'BaseMap',
         layers: [
           new TileLayer({
+            //new VectorTileLayer({
             title: 'point',
+            //format: new MVT(),
             // extent: [-13884991, 2870341, -7455066, 6338219],
             type: 'base',
             visible: false,
             source: new TileWMS({
-              projection: 'EPSG:4326',
+            //source: new VectorTileSource({
+              projection: 'EPSG:6668',
               url: 'http://localhost:8080/geoserver/wms',
               params: {'LAYERS': 'gisdb:p29-13_27'},
               ratio: 1,
@@ -55,12 +62,15 @@ function initMap(){
           }),
         
           new TileLayer({
+          //new VectorTileLayer({
             title: 'line',
+            //format: new MVT(),
             // extent: [-13884991, 2870341, -7455066, 6338219],
             type: 'base',
             visible: false,
             source: new TileWMS({
-              projection: 'EPSG:4326',
+            //source: new VectorTileSource({
+              projection: 'EPSG:6668',
               url: 'http://localhost:8080/geoserver/wms',
               params: {'LAYERS': 'gisdb:c23-06_27-g_coastline'},
               ratio: 1,
@@ -69,12 +79,15 @@ function initMap(){
           }),
         
           new TileLayer({
+          //new VectorTileLayer({
             title: 'porygon',
             // extent: [-13884991, 2870341, -7455066, 6338219],
             type: 'base',
+            //format: new MVT(),
             visible: true,
             source: new TileWMS({
-              projection: 'EPSG:4326',
+            //source: new VectorTileSource({
+              projection: 'EPSG:6668',
               url: 'http://localhost:8080/geoserver/wms',
               params: {'LAYERS': 'gisdb:n03-200101_27-g_administrativeboundary'},
               ratio: 1,
@@ -91,17 +104,15 @@ function initMap(){
       center: [0, 0]
     })
   });
+
+
+  //レイヤ変更
+  var layerSwitcher = new LayerSwitcher;　
+  map.addControl(layerSwitcher);
   
-  // //レイヤ変更 →　表示したらそれ以外のボタンがきかなくなる
-  // var layerSwitcher = new LayerSwitcher;　
-  // map.addInteraction(layerSwitcher);
-
-
-
-  //描画編集
+  //描画編集 デフォに設定
   var modify = new Modify({source: source});  
   map.addInteraction(modify);
-
 
   var draw, snap, select, translate;  
   var typeSelect = document.getElementById('type');
@@ -109,7 +120,7 @@ function initMap(){
   function addInteractions() {
 
     var value = typeSelect.value;
-    if (value !== 'MoveFeature') {  
+    if (value !== 'MoveObj' && value !== 'Delete') {  
 
       //描画
       draw = new Draw({　
@@ -129,12 +140,28 @@ function initMap(){
 
       //　図形の移動
       select = new Select();
+
       map.addInteraction(select);
-      translate = new Translate({
-        features: select.getFeatures()
-      });
-      map.addInteraction(translate);
+
+      if(value == 'MoveObj'){
+        
+        translate = new Translate({
+          features: select.getFeatures()
+        });
+        map.addInteraction(translate);
+
+      } else { 
+
+        // ※Hover選択に変えるほうがいいが、とりあえずは削除機能として成り立っている    
+        select.getFeatures().on('add', function(feature){
+          vector.getSource().removeFeature(feature.element);
+          feature.target.remove(feature.element);
+        });
+        map.addInteracon(select);
+
+      }
     }
+
   }
 
   /**
@@ -153,7 +180,12 @@ function initMap(){
     draw.removeLastPoint();
   });
 
+  document.getElementById('delete').addEventListener('click', function () {
+    vector.getSource().clear();
+  });
+
   addInteractions();
+
 };
 
 
