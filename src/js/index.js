@@ -45,14 +45,10 @@ function initMap(){
         'title' : 'BaseMap',
         layers: [
           new TileLayer({
-            //new VectorTileLayer({
             title: 'point',
-            //format: new MVT(),
-            // extent: [-13884991, 2870341, -7455066, 6338219],
             type: 'base',
             visible: false,
             source: new TileWMS({
-            //source: new VectorTileSource({
               projection: 'EPSG:6668',
               url: 'http://localhost:8080/geoserver/wms',
               params: {'LAYERS': 'gisdb:p29-13_27'},
@@ -62,14 +58,10 @@ function initMap(){
           }),
         
           new TileLayer({
-          //new VectorTileLayer({
             title: 'line',
-            //format: new MVT(),
-            // extent: [-13884991, 2870341, -7455066, 6338219],
             type: 'base',
             visible: false,
             source: new TileWMS({
-            //source: new VectorTileSource({
               projection: 'EPSG:6668',
               url: 'http://localhost:8080/geoserver/wms',
               params: {'LAYERS': 'gisdb:c23-06_27-g_coastline'},
@@ -79,14 +71,10 @@ function initMap(){
           }),
         
           new TileLayer({
-          //new VectorTileLayer({
             title: 'porygon',
-            // extent: [-13884991, 2870341, -7455066, 6338219],
             type: 'base',
-            //format: new MVT(),
             visible: true,
             source: new TileWMS({
-            //source: new VectorTileSource({
               projection: 'EPSG:6668',
               url: 'http://localhost:8080/geoserver/wms',
               params: {'LAYERS': 'gisdb:n03-200101_27-g_administrativeboundary'},
@@ -96,6 +84,7 @@ function initMap(){
           })
         ]
       }),
+      
       vector
     ],
 
@@ -105,7 +94,17 @@ function initMap(){
     })
   });
 
+////////////////////////  tile info     ///////////////////////////////////////////
 
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////
   //レイヤ変更
   var layerSwitcher = new LayerSwitcher;　
   map.addControl(layerSwitcher);
