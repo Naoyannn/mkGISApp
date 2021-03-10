@@ -198,12 +198,32 @@ function initMap(){
 
         select.on('select', function (e) {
           var selectedData = select.getFeatures();
-          var items = selectedData.item(0).getProperties();
+          var data = selectedData.item(0).getProperties();
+
+          var x = ''; 
+          var i = 0;
+          for (const [key, value] of Object.entries(data)) { 
+            if(i === 0){
+              i++;
+              continue;
+            } else {
+              x = x + (`${key}: ${value}` + '<br>');
+            }
+          }
+          document.getElementById('info').innerHTML = x;
+
+          
 
 
+          // for( info in data ) {
+          //   if( data.hasOwnProperty(key) ) {
+          //     console.log( info + ': ' + data[info] );
+          //   }
+          // }
 
-          document.getElementById('info').innerHTML = items
-          console.log(items);
+
+            // document.getElementById('info').innerHTML = data.value_;
+            // console.log(data.value_);
 
           
         });
