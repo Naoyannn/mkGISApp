@@ -11,11 +11,15 @@ import TileWMS from 'ol/source/TileWMS';
 import {Draw, Modify, Snap, Select, Translate} from 'ol/interaction';
 import {Circle as CircleStyle, Fill, Stroke, Style} from 'ol/style';
 import MVT from 'ol/format/MVT';
+import {altKeyOnly, click, pointerMove} from 'ol/events/condition';
 
-
+import GeoJSON from 'ol/format/GeoJSON';
+import {bbox as bboxStrategy} from 'ol/loadingstrategy';
 
 
 function initMap(){
+
+////// draw vector layer /////////////
 
   var source = new VectorSource({wrapX: false});
 
@@ -38,73 +42,119 @@ function initMap(){
     }),
   });
 
+////// porygon vector layer /////////////
+  var porygonVectorSource = new VectorSource({
+    format: new GeoJSON(),
+    url: 'http://localhost:8080/geoserver/gisdb/ows' +
+            '?service=WFS'+
+            '&version=1.0.0'+
+            '&request=GetFeature'+
+            '&typeName=gisdb%3An03-200101_27-g_administrativeboundary'+
+            //'&maxFeatures=50'+
+            '&outputFormat=application%2Fjson'+
+            '&srsname=EPSG:4326&',
+  });
+
+  var porygonVector = new VectorLayer({
+    title: 'porygon',
+    type: 'base',
+    visible: true,
+    source: porygonVectorSource,
+    style: new Style({
+      stroke: new Stroke({
+        color: 'rgba(37, 224, 0, 1.0)',
+        width: 2,
+      }),
+      fill: new Fill({
+        color: 'rgba(255, 255, 255, 0.2)',
+      }),
+    }),
+  });
+
+
+  ////// line vector layer /////////////
+  var lineVectorSource = new VectorSource({
+    format: new GeoJSON(),
+    url: 'http://localhost:8080/geoserver/gisdb/ows' +
+            '?service=WFS'+
+            '&version=1.0.0'+
+            '&request=GetFeature'+
+            '&typeName=gisdb%3Ac23-06_27-g_coastline'+
+            //'&maxFeatures=50'+
+            '&outputFormat=application%2Fjson'+
+            '&srsname=EPSG:4326&',
+  });
+
+
+  var lineVector = new VectorLayer({
+    title: 'line',
+    type: 'base',
+    visible: false,
+    source: lineVectorSource,
+    style: new Style({
+      stroke: new Stroke({
+        color: 'rgba(252, 17, 17, 1.0)',
+        width: 2,
+      }),
+      fill: new Fill({
+        color: 'rgba(255, 255, 255, 0.2)',
+      }),
+    }),
+  });
+  
+////// point vector layer /////////////
+  var pointVectorSource = new VectorSource({
+    format: new GeoJSON(),
+    url: 'http://localhost:8080/geoserver/gisdb/ows' +
+            '?service=WFS'+
+            '&version=1.0.0'+
+            '&request=GetFeature'+
+            '&typeName=gisdb%3Ap30-13_27'+
+            //'&maxFeatures=50'+
+            '&outputFormat=application%2Fjson'+
+            '&srsname=EPSG:4326&',
+  });
+
+  var pointVector = new VectorLayer({
+    title: 'point',
+    type: 'base',
+    visible: false,
+    ratio: 1,
+    source: pointVectorSource,
+    style: new Style({
+      stroke: new Stroke({
+        color: 'rgba(18, 1, 253, 1.0)',
+        width: 10,
+      }),
+      fill: new Fill({
+        color: 'rgba(255, 255, 255, 0.2)',
+      }),
+    }),
+  });
+
+
+////// create map /////////////
+
   const map = new Map({
     target: 'map',
     layers: [
       new LayerGroup({
         'title' : 'BaseMap',
-        layers: [
-          new TileLayer({
-            title: 'point',
-            type: 'base',
-            visible: false,
-            source: new TileWMS({
-              projection: 'EPSG:6668',
-              url: 'http://localhost:8080/geoserver/wms',
-              params: {'LAYERS': 'gisdb:p29-13_27'},
-              ratio: 1,
-              serverType: 'geoserver'
-            })
-          }),
-        
-          new TileLayer({
-            title: 'line',
-            type: 'base',
-            visible: false,
-            source: new TileWMS({
-              projection: 'EPSG:6668',
-              url: 'http://localhost:8080/geoserver/wms',
-              params: {'LAYERS': 'gisdb:c23-06_27-g_coastline'},
-              ratio: 1,
-              serverType: 'geoserver',
-            })
-          }),
-        
-          new TileLayer({
-            title: 'porygon',
-            type: 'base',
-            visible: true,
-            source: new TileWMS({
-              projection: 'EPSG:6668',
-              url: 'http://localhost:8080/geoserver/wms',
-              params: {'LAYERS': 'gisdb:n03-200101_27-g_administrativeboundary'},
-              ratio: 1,
-              serverType: 'geoserver',
-            })
-          })
+        layers: [ 
+          porygonVector,
+          lineVector,
+          pointVector
         ]
       }),
-      
       vector
     ],
 
     view: new View({
-      zoom: 0,
-      center: [0, 0]
+      zoom: 4,
+      center: [135.529326, 34.713113],
     })
   });
 
-////////////////////////  tile info     ///////////////////////////////////////////
-
-
-
-
-
-
-
-
-
-///////////////////////////////////////////////////////////////////////////////////
   //レイヤ変更
   var layerSwitcher = new LayerSwitcher;　
   map.addControl(layerSwitcher);
@@ -119,7 +169,7 @@ function initMap(){
   function addInteractions() {
 
     var value = typeSelect.value;
-    if (value !== 'MoveObj' && value !== 'Delete') {  
+    if (value !== 'MoveObj' && value !== 'Delete' && value !== 'Data') {  
 
       //描画
       draw = new Draw({　
@@ -132,17 +182,33 @@ function initMap(){
       snap = new Snap({source: source});　
       map.addInteraction(snap);
       
-    } else {
+    }else {
 
       // 描画編集を切る
       map.removeInteraction(modify);
 
       //　図形の移動
-      select = new Select();
+      select = new Select({
+        condition: click,
+      });
 
       map.addInteraction(select);
 
-      if(value == 'MoveObj'){
+      if(value == 'Data'){
+
+        select.on('select', function (e) {
+          var selectedData = select.getFeatures();
+          var items = selectedData.item(0).getProperties();
+
+
+
+          document.getElementById('info').innerHTML = items
+          console.log(items);
+
+          
+        });
+
+      }else if(value == 'MoveObj'){
         
         translate = new Translate({
           features: select.getFeatures()
@@ -189,10 +255,3 @@ function initMap(){
 
 
 initMap();
-
-
-
-
-
-
-
