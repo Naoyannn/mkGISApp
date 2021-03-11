@@ -12,3 +12,12 @@ var server = app.listen(1234, function(){
 
 // 2-2. 1234番ポートに接続したらpublicフォルダの内容を公開する。
 app.use(express.static(path.join(__dirname, 'public')));
+
+
+
+//Ajax-1
+app.post("/", (req, res) => {
+    console.log(req.body);
+    console.log("success");
+
+});

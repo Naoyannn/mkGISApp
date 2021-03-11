@@ -212,20 +212,6 @@ function initMap(){
           }
           document.getElementById('info').innerHTML = x;
 
-          
-
-
-          // for( info in data ) {
-          //   if( data.hasOwnProperty(key) ) {
-          //     console.log( info + ': ' + data[info] );
-          //   }
-          // }
-
-
-            // document.getElementById('info').innerHTML = data.value_;
-            // console.log(data.value_);
-
-          
         });
 
       }else if(value == 'MoveObj'){
@@ -272,6 +258,23 @@ function initMap(){
   addInteractions();
 
 };
-
-
 initMap();
+
+
+function getData() {
+    $.ajax({
+      url: "https://localhost:1234",
+      type: "POST",
+      data: {'test': 'Ajax'},
+      dataType: 'text'
+    }).done(function( data, textStatus, jqXHR ) {
+      //成功
+      console.log("成功")
+    }).fail(function( jqXHR, textStatus, errorThrown) {
+      //失敗
+      console.log("失敗")
+    }).always(function( jqXHR, textStatus) {
+      //通信完了
+      console.log("通信完了")
+    });
+}
