@@ -260,21 +260,33 @@ function initMap(){
 };
 initMap();
 
-
-function getData() {
+window.onload = () => {
+  var getData = function getData(e) { 
+    // var objData = { name : "TechAchademy" , 
+    //             languages : ["javascript", "HTML", "CSS"] };
+    
+    // var x = JSON.stringify(objData);
+    // console.log(x);JSON.stringify
+    e.preventDefault();
     $.ajax({
-      url: "https://localhost:1234",
-      type: "POST",
-      data: {'test': 'Ajax'},
-      dataType: 'text'
-    }).done(function( data, textStatus, jqXHR ) {
-      //成功
-      console.log("成功")
-    }).fail(function( jqXHR, textStatus, errorThrown) {
-      //失敗
-      console.log("失敗")
-    }).always(function( jqXHR, textStatus) {
-      //通信完了
-      console.log("通信完了")
-    });
+      url: 'http://localhost:1234',
+      type: 'POST',
+      data: JSON.stringify({ id : '12345'}),
+      dataType: 'json',
+      timeout: 15000,
+    }).success(function(data) {
+      alert('success!!');
+    }).error(function(XMLHttpRequest, textStatus, errorThrown) {
+      alert('error!!!');
+  　　console.log("XMLHttpRequest : " + XMLHttpRequest.status);
+  　　console.log("textStatus     : " + textStatus);
+  　　console.log("errorThrown    : " + errorThrown.message);
+  });
+
+  };
+  document.getElementById('submitBtn').addEventListener('click', getData);
 }
+
+
+
+

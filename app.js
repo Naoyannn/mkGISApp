@@ -17,7 +17,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 //Ajax-1
 app.post("/", (req, res) => {
+    
     console.log(req.body);
-    console.log("success");
 
 });
