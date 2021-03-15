@@ -19,12 +19,17 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 
 //Ajax-1
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.post("/", (req, res) => {
 
-    // var str = JSON.parse(req.body || "null");
-    // console.log(str);
+    var str = req.body;
+    console.log(str);
+
+
+    var strstr = Json.parse(str);
+    console.log(strstr);
     return;
     // 
 
