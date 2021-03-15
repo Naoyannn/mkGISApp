@@ -15,7 +15,8 @@
     "body-parser": "^1.19.0",
     "express": "^4.17.1",
     "ol": "^6.5.0",
-    "ol-layerswitcher": "^3.8.3"
+    "ol-layerswitcher": "^3.8.3",
+    "pg": "^8.5.1"
   },
   "devDependencies": {
     "@babel/core": "^7.11.5",

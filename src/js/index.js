@@ -202,7 +202,9 @@ function initMap(){
           var selectedData = select.getFeatures();
           var data = selectedData.item(0).getProperties();
 
-          var x = ''; 
+          if(data !== null){
+
+            var x = ''; 
           var i = 0;
           for (const [key, value] of Object.entries(data)) { 
             if(i === 0){
@@ -213,6 +215,8 @@ function initMap(){
             }
           }
           document.getElementById('info').innerHTML = x;
+
+          }
 
         });
 
@@ -261,32 +265,26 @@ function initMap(){
 initMap();
 
 
-
-
-
 window.onload = () => {
   
   var getData = function getData(e) { 
 
     //選択中の属性情報の変更
     var features = select.getFeatures();
-    console.log(features.item(0));
+    //console.log(features);
 
-    var data = features.item(0).getProperties();
-
-    console.log(data);
-
-    var json = JSON.stringify(data);
-
-    console.log(json);
+    var data = features.item(0);
+    const geoJsonObject = new GeoJSON();
+    var x = geoJsonObject.writeFeaturesObject([data]);
+    //console.log(x);
 
     $.ajax({
       type: 'POST',
       url: 'http://localhost:1234/',
       dataType: 'json',
-      data: json,
+      data: x,
     }).success(function(data) {
-      alert('success!!');
+      //console.log(data);
     }).error(function(XMLHttpRequest, textStatus, errorThrown) {
       alert('error!!!');
   　　console.log("XMLHttpRequest : " + XMLHttpRequest.status);
