@@ -17,6 +17,8 @@ import GeoJSON from 'ol/format/GeoJSON';
 import {bbox as bboxStrategy} from 'ol/loadingstrategy';
 
 
+var allSource, select;
+
 function initMap(){
 
 ////// draw vector layer /////////////
@@ -163,7 +165,7 @@ function initMap(){
   var modify = new Modify({source: source});  
   map.addInteraction(modify);
 
-  var draw, snap, select, translate;  
+  var draw, snap, translate;  
   var typeSelect = document.getElementById('type');
 
   function addInteractions() {
@@ -229,10 +231,8 @@ function initMap(){
           feature.target.remove(feature.element);
         });
         map.addInteracon(select);
-
       }
     }
-
   }
 
   /**
@@ -260,20 +260,31 @@ function initMap(){
 };
 initMap();
 
+
+
+
+
 window.onload = () => {
+  
   var getData = function getData(e) { 
-    // var objData = { name : "TechAchademy" , 
-    //             languages : ["javascript", "HTML", "CSS"] };
-    
-    // var x = JSON.stringify(objData);
-    // console.log(x);JSON.stringify
-    e.preventDefault();
+
+    //選択中の属性情報の変更
+    var features = select.getFeatures();
+    console.log(features.item(0));
+
+    var data = features.item(0).getProperties();
+
+    console.log(data);
+
+    var json = JSON.stringify(data);
+
+    console.log(json);
+
     $.ajax({
-      url: 'http://localhost:1234',
       type: 'POST',
-      data: JSON.stringify({ id : '12345'}),
+      url: 'http://localhost:1234/',
       dataType: 'json',
-      timeout: 15000,
+      data: json,
     }).success(function(data) {
       alert('success!!');
     }).error(function(XMLHttpRequest, textStatus, errorThrown) {
@@ -281,7 +292,7 @@ window.onload = () => {
   　　console.log("XMLHttpRequest : " + XMLHttpRequest.status);
   　　console.log("textStatus     : " + textStatus);
   　　console.log("errorThrown    : " + errorThrown.message);
-  });
+    });
 
   };
   document.getElementById('submitBtn').addEventListener('click', getData);

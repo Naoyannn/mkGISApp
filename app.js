@@ -1,6 +1,9 @@
 // 1. expressモジュールをロードし、インスタンス化してappに代入。
 var express = require("express");
+const bodyParser = require('body-parser');
 var app = express();
+
+
 
 // pathモジュールをロードし、pathに代入
 const path = require('path');
@@ -16,8 +19,17 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 
 //Ajax-1
+app.use(bodyParser.urlencoded({ extended: true }));
+
 app.post("/", (req, res) => {
+
+    // var str = JSON.parse(req.body || "null");
+    // console.log(str);
+    return;
+    // 
+
+    //
     
-    console.log(req.body);
+
 
 });
