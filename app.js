@@ -29,22 +29,9 @@ client.connect((err) => {
       console.log('error connecting: ' + err.stack);
       return;
     } else {
-
         console.log('Postgress connect success');
-
-        var q ='SELECT n03_004 FROM "n03-200101_27-g_administrativeboundary" WHERE gid = 1';
-        client.query(q, function (err, result) {
-
-            console.log(result); //コンソール上での確認用なため、この1文は必須ではない。
-            client.end();
-        });
-
     }
-    
-    
 });
-
-
 
 //Ajax-1
 app.use(bodyParser.json());
@@ -52,21 +39,43 @@ app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
 app.post("/", (req, res) => {
 
-
     var str = req.body;
-    
-    // pgPool.connect( function(err, client) {
-    //     if (err) {
-    //       console.log(err);
-    //     } else {
-    //       client.query('SELECT n03_001 FROM n03-200101_27-g_administrativeboundary', function (err, result) {
 
-    //         console.log(result); //コンソール上での確認用なため、この1文は必須ではない。
-    //         client.end();
-    //       });
-    //     }
-    // });
+    let tableName = str.tableName;
+    let gid = str.gid;
 
-    res.send(str);
+    //console.log(tableName);
+    //console.log(gid);
 
+    var query = "";
+    var queryAll;
+
+    for (const [key, value] of Object.entries(str)) {
+        if(key != "tableName" && key != "gid"){
+            if(value != "" && value != null && typeof(value) == "string"){
+                
+                if(query == ""){
+                    query = "SET " + key + "=" + "'" + value + "'"; 
+                } else {
+                    query = ", " + query + key + "=" + "'" + value; 
+                } 
+            }
+        }
+    }
+
+    if(query == ""){
+        return;
+    }
+
+    queryAll = "UPDATE " + "\"" + tableName + "\"" + query + "WHERE gid = " + gid;
+
+    //console.log(queryAll);
+
+    client.query(queryAll, function (err, result) {
+        
+        client.end();
+        console.log("Update success");
+        res.send(str);
+
+    });
 });

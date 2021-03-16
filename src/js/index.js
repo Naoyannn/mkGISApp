@@ -19,6 +19,8 @@ import {bbox as bboxStrategy} from 'ol/loadingstrategy';
 
 var allSource, select;
 
+var idList = new Array();
+
 function initMap(){
 
 ////// draw vector layer /////////////
@@ -168,6 +170,8 @@ function initMap(){
   var draw, snap, translate;  
   var typeSelect = document.getElementById('type');
 
+  
+
   function addInteractions() {
 
     var value = typeSelect.value;
@@ -204,14 +208,20 @@ function initMap(){
 
           if(data !== null){
 
-            var x = ''; 
+          var x = ''; 
           var i = 0;
           for (const [key, value] of Object.entries(data)) { 
             if(i === 0){
               i++;
               continue;
             } else {
-              x = x + (`${key}: ${value}` + '<br>');
+
+              var id = key;
+              var html ="＜変更＞<input type=\"text\" id=\"" + id +"\">"
+              idList.push(id);
+
+              x = x + (`${key}: ${value}` + html + '<br>');
+              
             }
           }
           document.getElementById('info').innerHTML = x;
@@ -267,7 +277,84 @@ initMap();
 
 window.onload = () => {
   
-  var getData = function getData(e) { 
+  var editData = function editData(e) { 
+
+    //選択中の属性情報の変更
+    var features = select.getFeatures();
+    var originalData = features.item(0).getProperties();
+
+
+    var data = features.item(0);
+    // console.log(data);
+    var id = data.getId().split( '.' );
+
+    //編集入力値取得
+    var featureInfo = {};
+
+    if(id.length  !== 2){
+      
+    } else {
+      for(let j = 0; j <id.length; j++){
+        if(j === 0 ){
+          featureInfo["tableName"] = id[j]
+        } else {
+          featureInfo["gid"] = id[j]
+        }
+      }
+    }
+
+    for(const id of idList){
+      var editedInfo = document.getElementById(id).value;
+      featureInfo[id] = editedInfo;
+    }
+
+    console.log(featureInfo);
+
+    // const geoJsonObject = new GeoJSON();
+    // var x = geoJsonObject.writeFeaturesObject([data]);
+
+    $.ajax({
+      type: 'POST',
+      url: 'http://localhost:1234/',
+      dataType: 'json',
+      data: featureInfo,
+    }).success(function(data) {
+      var x = ''; 
+      var i = 0;
+      // 元データを読み込み、更新されているものだけ上書き
+      for (const [key, value] of Object.entries(originalData)) { 
+        if(i === 0){
+          i++;
+          continue;
+        } else {
+          
+          for (const [key2, value2] of Object.entries(data)) { 
+            if(value2 != "" && value2 != null){
+              if(key == key2){
+                value = value2;
+              }
+            } 
+          }
+          var id = key;
+          var html ="＜変更＞<input type=\"text\" id=\"" + id +"\">"
+          x = x + (`${key}: ${value}` + html + '<br>');
+        }
+      }
+      document.getElementById('info').innerHTML = x;
+    }).error(function(XMLHttpRequest, textStatus, errorThrown) {
+      alert('error!!!');
+  　　console.log("XMLHttpRequest : " + XMLHttpRequest.status);
+  　　console.log("textStatus     : " + textStatus);
+  　　console.log("errorThrown    : " + errorThrown.message);
+    });
+
+  };
+  document.getElementById('editFeatureInfo').addEventListener('click', editData);
+
+  var saveNewData = function saveNewData(e) { 
+
+    var editedInfo = document.getElementById("n03_001").value;
+    console.log(editedInfo);
 
     //選択中の属性情報の変更
     var features = select.getFeatures();
@@ -284,7 +371,7 @@ window.onload = () => {
       dataType: 'json',
       data: x,
     }).success(function(data) {
-      //console.log(data);
+      console.log(data);
     }).error(function(XMLHttpRequest, textStatus, errorThrown) {
       alert('error!!!');
   　　console.log("XMLHttpRequest : " + XMLHttpRequest.status);
@@ -293,7 +380,8 @@ window.onload = () => {
     });
 
   };
-  document.getElementById('submitBtn').addEventListener('click', getData);
+  document.getElementById('saveNewFeature').addEventListener('click', saveNewData);
+
 }
 
 
