@@ -4,13 +4,6 @@ const bodyParser = require('body-parser');
 var app = express();
 var {Client} = require('pg');
 
-var client = new Client({
-    database: "gisdb",
-    user: "postgres",
-    password: "53320706",
-    host: "localhost",
-    port: 5433,
-});
 
 // pathモジュールをロードし、pathに代入
 const path = require('path');
@@ -24,14 +17,14 @@ var server = app.listen(1234, function(){
 // 2-2. 1234番ポートに接続したらpublicフォルダの内容を公開する。
 app.use(express.static(path.join(__dirname, 'public')));
 
-client.connect((err) => {
-    if (err) {
-      console.log('error connecting: ' + err.stack);
-      return;
-    } else {
-        console.log('Postgress connect success');
-    }
-});
+// client.connect((err) => {
+//     if (err) {
+//       console.log('error connecting: ' + err.stack);
+//       return;
+//     } else {
+//         console.log('Postgress connect success');
+//     }
+// });
 
 //Ajax-1
 app.use(bodyParser.json());
@@ -39,13 +32,18 @@ app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
 app.post("/", (req, res) => {
 
+    var client = new Client({
+        database: "gisdb",
+        user: "postgres",
+        password: "53320706",
+        host: "localhost",
+        port: 5433,
+    });
+
     var str = req.body;
 
     let tableName = str.tableName;
     let gid = str.gid;
-
-    //console.log(tableName);
-    //console.log(gid);
 
     var query = "";
     var queryAll;
@@ -57,7 +55,7 @@ app.post("/", (req, res) => {
                 if(query == ""){
                     query = "SET " + key + "=" + "'" + value + "'"; 
                 } else {
-                    query = ", " + query + key + "=" + "'" + value; 
+                    query = query + ", " + key + "=" + "'" + value + "'"; 
                 } 
             }
         }
@@ -69,13 +67,23 @@ app.post("/", (req, res) => {
 
     queryAll = "UPDATE " + "\"" + tableName + "\"" + query + "WHERE gid = " + gid;
 
-    //console.log(queryAll);
-
-    client.query(queryAll, function (err, result) {
+    console.log(queryAll);
+    client.connect((err) => {
+        if (err) {
+          console.log('error connecting: ' + err.stack);
+          return;
+        } else {
+            client.query(queryAll, function (err, result) {
         
-        client.end();
-        console.log("Update success");
-        res.send(str);
-
+                client.end();
+                console.log("Update success");
+                console.log(result);
+                res.send(str);
+        
+            });
+            
+        }
     });
+
+    
 });

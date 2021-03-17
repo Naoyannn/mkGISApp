@@ -12,12 +12,14 @@ import {Draw, Modify, Snap, Select, Translate} from 'ol/interaction';
 import {Circle as CircleStyle, Fill, Stroke, Style} from 'ol/style';
 import MVT from 'ol/format/MVT';
 import {altKeyOnly, click, pointerMove} from 'ol/events/condition';
-
+import * as olProj from 'ol/proj';
 import GeoJSON from 'ol/format/GeoJSON';
 import {bbox as bboxStrategy} from 'ol/loadingstrategy';
 
 
 var allSource, select;
+
+
 
 var idList = new Array();
 
@@ -54,7 +56,6 @@ function initMap(){
             '&version=1.0.0'+
             '&request=GetFeature'+
             '&typeName=gisdb%3An03-200101_27-g_administrativeboundary'+
-            //'&maxFeatures=50'+
             '&outputFormat=application%2Fjson'+
             '&srsname=EPSG:4326&',
   });
@@ -84,7 +85,6 @@ function initMap(){
             '&version=1.0.0'+
             '&request=GetFeature'+
             '&typeName=gisdb%3Ac23-06_27-g_coastline'+
-            //'&maxFeatures=50'+
             '&outputFormat=application%2Fjson'+
             '&srsname=EPSG:4326&',
   });
@@ -109,12 +109,11 @@ function initMap(){
 ////// point vector layer /////////////
   var pointVectorSource = new VectorSource({
     format: new GeoJSON(),
-    url: 'http://localhost:8080/geoserver/gisdb/ows' +
+    url: 'http://localhost:8080/geoserver/gisdb/ows'+
             '?service=WFS'+
             '&version=1.0.0'+
             '&request=GetFeature'+
             '&typeName=gisdb%3Ap30-13_27'+
-            //'&maxFeatures=50'+
             '&outputFormat=application%2Fjson'+
             '&srsname=EPSG:4326&',
   });
@@ -127,17 +126,30 @@ function initMap(){
     source: pointVectorSource,
     style: new Style({
       stroke: new Stroke({
-        color: 'rgba(18, 1, 253, 1.0)',
-        width: 10,
+        color: 'rgba(0, 166, 255, 1.0)',
+        width: 5,
       }),
       fill: new Fill({
-        color: 'rgba(255, 255, 255, 0.2)',
+        color: 'rgba(0, 166, 255, 1.0)',
+      }),
+      image: new CircleStyle({
+        radius: 3,
+        fill: new Fill({
+          color: 'rgba(0, 166, 255, 1.0)',
+        }),
       }),
     }),
   });
 
 
 ////// create map /////////////
+
+  let center = olProj.transform([135.529326, 34.713113], 'EPSG:4326', 'EPSG:3857');
+
+  let view = new View({
+    zoom: 8,
+    center: center,
+  })
 
   const map = new Map({
     target: 'map',
@@ -147,16 +159,13 @@ function initMap(){
         layers: [ 
           porygonVector,
           lineVector,
-          pointVector
+          pointVector,
         ]
       }),
       vector
     ],
 
-    view: new View({
-      zoom: 4,
-      center: [135.529326, 34.713113],
-    })
+    view: view,
   });
 
   //レイヤ変更
@@ -281,6 +290,8 @@ window.onload = () => {
 
     //選択中の属性情報の変更
     var features = select.getFeatures();
+    console.log(features);
+
     var originalData = features.item(0).getProperties();
 
 
@@ -308,7 +319,7 @@ window.onload = () => {
       featureInfo[id] = editedInfo;
     }
 
-    console.log(featureInfo);
+    //console.log(featureInfo);
 
     // const geoJsonObject = new GeoJSON();
     // var x = geoJsonObject.writeFeaturesObject([data]);
@@ -319,6 +330,7 @@ window.onload = () => {
       dataType: 'json',
       data: featureInfo,
     }).success(function(data) {
+      
       var x = ''; 
       var i = 0;
       // 元データを読み込み、更新されているものだけ上書き
@@ -332,15 +344,18 @@ window.onload = () => {
             if(value2 != "" && value2 != null){
               if(key == key2){
                 value = value2;
+                features.set(key2, value2);
               }
             } 
           }
+          
           var id = key;
           var html ="＜変更＞<input type=\"text\" id=\"" + id +"\">"
           x = x + (`${key}: ${value}` + html + '<br>');
         }
       }
       document.getElementById('info').innerHTML = x;
+
     }).error(function(XMLHttpRequest, textStatus, errorThrown) {
       alert('error!!!');
   　　console.log("XMLHttpRequest : " + XMLHttpRequest.status);
