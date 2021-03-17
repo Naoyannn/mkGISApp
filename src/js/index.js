@@ -15,6 +15,7 @@ import {altKeyOnly, click, pointerMove} from 'ol/events/condition';
 import * as olProj from 'ol/proj';
 import GeoJSON from 'ol/format/GeoJSON';
 import {bbox as bboxStrategy} from 'ol/loadingstrategy';
+import OSM from 'ol/source/OSM';
 
 var allSource, select;
 
@@ -34,16 +35,22 @@ function initMap(){
       }),
       stroke: new Stroke({
         color: '#ffcc33',
-        width: 2,
+        width: 3,
       }),
       image: new CircleStyle({
-        radius: 7,
+        radius: 5,
         fill: new Fill({
           color: '#ffcc33',
         }),
       }),
     }),
   });
+
+  var osm = new TileLayer({
+    source: new OSM(),
+  });
+
+
 
 ////// porygon vector layer /////////////
   var porygonVectorSource = new VectorSource({
@@ -65,7 +72,7 @@ function initMap(){
     style: new Style({
       stroke: new Stroke({
         color: 'rgba(37, 224, 0, 1.0)',
-        width: 2,
+        width: 3,
       }),
       fill: new Fill({
         color: 'rgba(255, 255, 255, 0.2)',
@@ -95,7 +102,7 @@ function initMap(){
     style: new Style({
       stroke: new Stroke({
         color: 'rgba(252, 17, 17, 1.0)',
-        width: 2,
+        width: 3,
       }),
       fill: new Fill({
         color: 'rgba(255, 255, 255, 0.2)',
@@ -124,7 +131,7 @@ function initMap(){
     style: new Style({
       stroke: new Stroke({
         color: 'rgba(0, 166, 255, 1.0)',
-        width: 5,
+        width: 3,
       }),
       fill: new Fill({
         color: 'rgba(0, 166, 255, 1.0)',
@@ -151,6 +158,7 @@ function initMap(){
   const map = new Map({
     target: 'map',
     layers: [
+      osm,
       new LayerGroup({
         'title' : 'BaseMap',
         layers: [ 
@@ -159,7 +167,7 @@ function initMap(){
           pointVector,
         ]
       }),
-      vector
+      vector,
     ],
 
     view: view,
@@ -182,18 +190,28 @@ function initMap(){
 
     var value = typeSelect.value;
     if (value !== 'MoveObj' && value !== 'Delete' && value !== 'Data') {  
+      
+      if(value == 'Modify'){
 
-      //描画
-      draw = new Draw({　
-        source: source,
-        type: typeSelect.value,
-      });
-      map.addInteraction(draw);
-      
-      // スナップ
-      snap = new Snap({source: source});　
-      map.addInteraction(snap);
-      
+        snap = new Snap({source: source});　
+        map.addInteraction(snap);
+
+      } else {
+
+        map.removeInteraction(modify);
+        //描画
+        draw = new Draw({　
+          source: source,
+          type: typeSelect.value,
+        });
+        map.addInteraction(draw);
+        
+        // スナップ
+        snap = new Snap({source: source});　
+        map.addInteraction(snap);
+
+      }
+
     }else {
 
       // 描画編集を切る
@@ -210,7 +228,12 @@ function initMap(){
 
         select.on('select', function (e) {
           var selectedData = select.getFeatures();
+
           var data = selectedData.item(0).getProperties();
+
+          console.log(selectedData);
+          console.log(selectedData.item(0));
+          console.log(data);
 
           if(data !== null){
 
@@ -424,7 +447,7 @@ window.onload = () => {
 
     
   };
-  document.getElementById('saveNewFeature').addEventListener('click', deleteData);
+  document.getElementById('deleteShape').addEventListener('click', deleteData);
 
 }
 
