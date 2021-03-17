@@ -16,10 +16,7 @@ import * as olProj from 'ol/proj';
 import GeoJSON from 'ol/format/GeoJSON';
 import {bbox as bboxStrategy} from 'ol/loadingstrategy';
 
-
 var allSource, select;
-
-
 
 var idList = new Array();
 
@@ -326,7 +323,7 @@ window.onload = () => {
 
     $.ajax({
       type: 'POST',
-      url: 'http://localhost:1234/',
+      url: 'http://localhost:1234/savefeature',
       dataType: 'json',
       data: featureInfo,
     }).success(function(data) {
@@ -366,36 +363,68 @@ window.onload = () => {
   };
   document.getElementById('editFeatureInfo').addEventListener('click', editData);
 
-  var saveNewData = function saveNewData(e) { 
 
-    var editedInfo = document.getElementById("n03_001").value;
-    console.log(editedInfo);
+  var deleteData = function deleteData(e) { 
+
+    //選択中の属性情報の変更
+    // var features = select.getFeatures();
+    // console.log(features);
+
+    // var data = features.item(0);
+
+    
+    // const geoJsonObject = new GeoJSON();
+    // var x = geoJsonObject.writeFeaturesObject([data]);
+    // console.log(x);
 
     //選択中の属性情報の変更
     var features = select.getFeatures();
-    //console.log(features);
+    console.log(features);
 
     var data = features.item(0);
-    const geoJsonObject = new GeoJSON();
-    var x = geoJsonObject.writeFeaturesObject([data]);
-    //console.log(x);
+    // console.log(data);
+    var id = data.getId().split( '.' );
 
-    $.ajax({
-      type: 'POST',
-      url: 'http://localhost:1234/',
-      dataType: 'json',
-      data: x,
-    }).success(function(data) {
-      console.log(data);
-    }).error(function(XMLHttpRequest, textStatus, errorThrown) {
-      alert('error!!!');
-  　　console.log("XMLHttpRequest : " + XMLHttpRequest.status);
-  　　console.log("textStatus     : " + textStatus);
-  　　console.log("errorThrown    : " + errorThrown.message);
-    });
+    //編集入力値取得
+    var featureInfo = {};
 
+    if(id.length  !== 2){
+      
+    } else {
+      for(let j = 0; j <id.length; j++){
+        if(j === 0 ){
+          featureInfo["tableName"] = id[j]
+        } else {
+          featureInfo["gid"] = id[j]
+        }
+      }
+    }
+
+    var result = window.confirm( "ID: " + id[1] +  "のデータを本当に削除しますか？");
+
+    if(result){
+      $.ajax({
+        type: 'POST',
+        url: 'http://localhost:1234/delete',
+        dataType: 'json',
+        data: featureInfo,
+      }).success(function(data) {
+        console.log(data);
+        window.location.reload(true);
+      }).error(function(XMLHttpRequest, textStatus, errorThrown) {
+        alert('error!!!');
+    　　console.log("XMLHttpRequest : " + XMLHttpRequest.status);
+    　　console.log("textStatus     : " + textStatus);
+    　　console.log("errorThrown    : " + errorThrown.message);
+      });
+
+    } else {
+      return;
+    }
+
+    
   };
-  document.getElementById('saveNewFeature').addEventListener('click', saveNewData);
+  document.getElementById('saveNewFeature').addEventListener('click', deleteData);
 
 }
 

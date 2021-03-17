@@ -17,20 +17,11 @@ var server = app.listen(1234, function(){
 // 2-2. 1234番ポートに接続したらpublicフォルダの内容を公開する。
 app.use(express.static(path.join(__dirname, 'public')));
 
-// client.connect((err) => {
-//     if (err) {
-//       console.log('error connecting: ' + err.stack);
-//       return;
-//     } else {
-//         console.log('Postgress connect success');
-//     }
-// });
-
 //Ajax-1
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '10mb', parameterLimit: 1000000 }));
 
-app.post("/", (req, res) => {
+app.post("/savefeature", (req, res) => {
 
     var client = new Client({
         database: "gisdb",
@@ -44,14 +35,14 @@ app.post("/", (req, res) => {
 
     let tableName = str.tableName;
     let gid = str.gid;
-
+    
     var query = "";
     var queryAll;
-
+    
     for (const [key, value] of Object.entries(str)) {
         if(key != "tableName" && key != "gid"){
             if(value != "" && value != null && typeof(value) == "string"){
-                
+                    
                 if(query == ""){
                     query = "SET " + key + "=" + "'" + value + "'"; 
                 } else {
@@ -60,30 +51,67 @@ app.post("/", (req, res) => {
             }
         }
     }
-
+    
     if(query == ""){
         return;
     }
-
+    
     queryAll = "UPDATE " + "\"" + tableName + "\"" + query + "WHERE gid = " + gid;
-
+    
     console.log(queryAll);
     client.connect((err) => {
         if (err) {
-          console.log('error connecting: ' + err.stack);
-          return;
+            console.log('error connecting: ' + err.stack);
+            return;
         } else {
             client.query(queryAll, function (err, result) {
-        
+            
                 client.end();
                 console.log("Update success");
-                console.log(result);
                 res.send(str);
-        
-            });
             
+            });
+        }
+    });
+});
+
+app.post("/delete", (req, res) => {
+
+    var client = new Client({
+        database: "gisdb",
+        user: "postgres",
+        password: "53320706",
+        host: "localhost",
+        port: 5433,
+    });
+
+    var str = req.body;
+    let tableName = str.tableName;
+    let gid = str.gid;
+
+    console.log(tableName);
+    console.log(gid);
+
+    query = "DELETE FROM " + "\"" + tableName + "\"" + "WHERE gid = " + gid;
+
+    console.log("delete");
+
+    console.log(query);
+    client.connect((err) => {
+        if (err) {
+            console.log('error connecting: ' + err.stack);
+            return;
+        } else {
+            client.query(query, function (err, result) {
+            
+                client.end();
+                console.log("Delete success");
+                res.send(str);
+            
+            });
         }
     });
 
-    
+
+
 });
