@@ -32,9 +32,9 @@ app.post("/savefeature", (req, res) => {
         connectServer(ope, req, res);
 
     }
-    catch(next){
+    catch(e){
 
-        res.send(next) ;
+        res.send(e) ;
 
     }
 });
@@ -50,7 +50,7 @@ app.post("/delete", (req, res) => {
     }
     catch(e){
 
-        res.send(next) ;
+        res.send(e) ;
 
     }
 });
@@ -87,11 +87,18 @@ function connectServer(ope, req, res){
         }
     } catch(e) {
 
-        if(errorText == null ||errorText ==""){
+        console.log(e);
+        var errorinfo = "サーバー通信に失敗しました";
+        if(errorText == null ||errorText =="" || e != errorinfo){
 
-            errorText = "サーバー通信に失敗しました";
+            errorText = e;
+
+        } else if(errorText == null ||errorText =="" || e == errorinfo){
+
+            errorText = errorinfo;
 
         }
+
         throw(errorText);
     }
 }
@@ -102,6 +109,7 @@ function makeUpdateSql(str, gid, tableName){
     var queryAll;
     
     try{
+
         // クエリ作成　結合
         for (const [key, value] of Object.entries(str)) {
         
@@ -130,11 +138,12 @@ function makeUpdateSql(str, gid, tableName){
     }
     catch(e){
 
-        if(errorText == null ||errorText ==""){
-
+        if(e == "入力文字数が制限をこえています"){
+            errorText = e;
+        } else {
             errorText = "クエリの作成に失敗しました";
-
         }
+
         throw(errorText);
     }
 }
@@ -142,18 +151,14 @@ function makeUpdateSql(str, gid, tableName){
 function makeDeleteSql(gid, tableName){
     
     try{
-        var queryAll;
-
-        queryAll = "DELETE FROM " + "\"" + tableName + "\"" + "WHERE gid = " + gid;
+        var queryAll = "DELETE FROM " + "\"" + tableName + "\"" + "WHERE gid = " + gid;
         return queryAll;
 
     }
     catch{
-        if(errorText == null ||errorText ==""){
 
-            errorText = "クエリの作成に失敗しました";
+        errorText = "クエリの作成に失敗しました";
 
-        }
         throw(errorText);
     }
 }
@@ -191,11 +196,8 @@ function connect(str, res, query){
 
     catch(e){
 
-        if(errorText == null ||errorText ==""){
-
-            errorText = "サーバー通信実施に失敗しました";
-
-        }
+        errorText = "サーバー通信実行に失敗しました";;
+        
         throw(errorText);
     }
 }
@@ -269,11 +271,8 @@ function resitCharNumLimit(key, value){
     }
     catch(e){
 
-        if(errorText == null ||errorText ==""){
+        errorText = "入力文字数が制限をこえています"
 
-            errorText = "入力文字数が制限をこえています"
-
-        }
         throw(errorText);
     } 
 }

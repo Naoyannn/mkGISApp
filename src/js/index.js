@@ -8,12 +8,13 @@ import {click} from 'ol/events/condition';
 import * as olProj from 'ol/proj';
 import GeoJSON from 'ol/format/GeoJSON';
 import OSM from 'ol/source/OSM';
+import PointerInteraction from 'ol/interaction/Pointer';
 
 //選択図形
 var selectedShape;
 
 //選択した地物データのKeyリスト
-var selectedGeoKeyList = new Array();
+var selectedGeoKeyList;
 
 //MAP
 var map;
@@ -255,6 +256,8 @@ function Main(){
 
           selectedShape.on('select', function (e) {
 
+            selectedGeoKeyList  = new Array()
+
             // 属性データ　取得
             var selectedData = selectedShape.getFeatures();
 
@@ -263,33 +266,47 @@ function Main(){
             // Feature データチェック
             if(attributeData !== null){
 
-              // 表示HTML（全文）変数 
-              var fullHtml = ''; 
-              var i = 0;
-              for (const [key, value] of Object.entries(attributeData)) { 
-                if(i === 0){
-                  i++;
-                  continue;
-                } else {
+              if(Object.keys(attributeData).length > 1){
 
-                // 入力可能文字数表示（idによって文字数を変更）
-                var limitcharNum = limitCharNum(key);
+                 // 表示HTML（全文）変数 
+                var fullHtml = ''; 
+                var i = 0;
+                for (const [key, value] of Object.entries(attributeData)) { 
 
-                /// 属性情報表示　HTML作成（1行） 
-                var html ="（" +limitcharNum+  "）<input type=\"text\" id=\"" + key +"\" name=\"" + key +"\" class = \"input\"　>"
-                selectedGeoKeyList.push(key);
+                  if(i === 0){
+                    i++;
+                    continue;
+                  } else {
+
+                    // 入力可能文字数表示（idによって文字数を変更）
+                    var limitcharNum = limitCharNum(key);
+
+                    /// 属性情報表示　HTML作成（1行） 
+                    var html ="（" +limitcharNum+  "）<input type=\"text\" id=\"" + key +"\" name=\"" + key +"\" class = \"input\"　>"
+                    selectedGeoKeyList.push(key);
+                    
+                    // 属性情報表示　HTML作成（全文） 
+                    fullHtml = fullHtml + (`${key}: ${value}` + html + '<br>');
+                  }
+                } 
+
+                // 属性情報表示 
+                document.getElementById('info').innerHTML = fullHtml;
+
+                // 属性情報　編集ボタン表示 
+                document.getElementById("botton").style.visibility = "visible"; 
+
+              } else {
                 
-                // 属性情報表示　HTML作成（全文） 
-                fullHtml = fullHtml + (`${key}: ${value}` + html + '<br>');
-                
-                }
-              } 
-            
-              // 属性情報表示 
-              document.getElementById('info').innerHTML = fullHtml;
+                fullHtml = makeNewFeatureInfo(attributeData);
 
-              // 属性情報　編集ボタン表示 
-              document.getElementById("botton").style.visibility = "visible";   
+                // 属性情報入力欄表示
+                document.getElementById('info').innerHTML = fullHtml;
+
+                // 属性情報　編集ボタン表示 
+                document.getElementById("botton").style.visibility = "visible"; 
+
+              }
 
             } else {
 
@@ -314,13 +331,34 @@ function Main(){
         } else if(chosenOpe == 'Delete'){ 
 
           noShowFeatureInfo();
-      
           // 描画削除
-          selectedShape.getFeatures().on(function(feature){
-            vector.getSource().removeFeature(feature.element);
-            feature.target.remove(feature.element);
+          selectedShape.getFeatures().on('add', function(feature){
+
+            var selectedData = selectedShape.getFeatures();
+
+            var attributeData = selectedData.item(0).getProperties();  
+
+            if(Object.keys(attributeData).length > 1){
+
+              alert("DBに登録されている図形です。図形情報削除ボタンで削除してください");
+              return;
+            }
+
+            var alertResult = confirm("描画を削除しますか？");
+
+            if(alertResult){
+
+              selectedShape.getLayer(feature.element).getSource().removeFeature(feature.element);
+              feature.target.remove(feature.element);
+              map.addInteraction(selectedShape);
+
+            } else {
+
+              alert("描画を中止しました。");
+              return;
+
+            }
           });
-          map.addInteracon(selectedShape);
         }
       }
     }
@@ -409,7 +447,6 @@ $(function() {
           return;
         } 
       });
-
     } 
     catch(e) {
 
@@ -432,7 +469,6 @@ $(function() {
 
       // 選択中　属性情報取得
       var features = selectedShape.getFeatures();
-      console.log(features);
       var originalData = features.item(0).getProperties();
 
       // 選択中　属性情報　id・テーブル名取得 
@@ -441,7 +477,15 @@ $(function() {
         throw new Error("属性情報が存在しません");
       }
   
-      var uidTableNameList = data.getId().split( '.' );
+      if(data.getId() == null || data.getId() ==""){
+
+        throw new Error("DBに元データが存在しません。図形を新規登録して下さい")
+
+      } else {
+
+        var uidTableNameList = data.getId().split( '.' );
+
+      }
 
       for(let j = 0; j <uidTableNameList.length; j++){
         if(j == 0 ){
@@ -458,7 +502,12 @@ $(function() {
       }
       
       for(const id of selectedGeoKeyList){
+
+        if(document.getElementById(id).value == null){
+          continue;
+        }
         var editedInfo = document.getElementById(id).value;
+        
         featureInfo[id] = editedInfo;
       }
 
@@ -497,7 +546,7 @@ $(function() {
               }
               
               var id = key;
-              var limitcharNum = limitCharNum(id);;
+              var limitcharNum = limitCharNum(id);
 
               // 属性情報表示　HTML作成（1行） 
               var html ="（" +limitcharNum+  "）<input type=\"text\" id=\"" + id +"\" name=\"" + id +"\" class = \"input\"　>"
@@ -508,15 +557,19 @@ $(function() {
             }
           }
           document.getElementById('info').innerHTML = fullHtml;
-
-          return;
+          porygonVectorSource.refresh();
+          lineVectorSource.refresh();
+          pointVectorSource.refresh();
 
         // ajax　処理失敗 
         }).error(function(XMLHttpRequest, textStatus, errorThrown, body, responseText) {
 
           alert(XMLHttpRequest.responseText);
           alert('上書きが失敗しました。');
-          throw new Error("上書きが失敗しました")    
+          console.log("XMLHttpRequest : " + XMLHttpRequest.status);
+          console.log("textStatus     : " + textStatus);
+          console.log("errorThrown    : " + errorThrown.message); 
+          throw new Error("上書きが失敗しました")   
           
         });
 
@@ -553,7 +606,15 @@ $(function() {
         throw new Error("属性情報が存在しません")
       }
 
-      var uidTableNameList = attributeData.getId().split( '.' );
+      if(attributeData.getId() == null || attributeData.getId() ==""){
+
+        throw new Error("DBに元データが存在しません。削除できません")
+
+      } else {
+
+        var uidTableNameList = attributeData.getId().split( '.' );
+
+      }
 
       for(let j = 0; j <uidTableNameList.length; j++){
         if(j == 0 ){
@@ -589,14 +650,13 @@ $(function() {
 
         // ajax 処理失敗 
         }).error(function(XMLHttpRequest, textStatus, errorThrown) {
-          if(responseText)
 
+          alert(XMLHttpRequest.responseText);
           alert('データの削除に失敗しました');
           console.log("XMLHttpRequest : " + XMLHttpRequest.status);
           console.log("textStatus     : " + textStatus);
           console.log("errorThrown    : " + errorThrown.message);
-          
-          return;
+          throw new Error("データの削除に失敗しました")   
         });
 
       } else {
@@ -793,6 +853,72 @@ function noShowFeatureInfo(){
 
 };
 
+// 新規描画　属性情報入力HTML表示
+function makeNewFeatureInfo(attributeData){
+
+  var fullHtml;
+  var porygonColumBase = "n03_00";
+  var lineColumBase = "c23_00";
+  var pointColumBase = "p30_00";
+
+  try{
+
+    if(attributeData.geometry.constructor.name == "Polygon"){
+
+      fullHtml = makeFullHtml(porygonColumBase);
+  
+      return fullHtml;
+  
+    } else if(attributeData.geometry.constructor.name == "LineString"){
+  
+      fullHtml = makeFullHtml(lineColumBase);
+  
+      return fullHtml;
+  
+    } else if(attributeData.geometry.constructor.name == "Point"){
+  
+      fullHtml = makeFullHtml(pointColumBase);
+  
+      return fullHtml;
+  
+    } else {
+  
+      throw new Error('レイヤが存在しません。');
+  
+    }
+  }
+
+  catch{
+    
+    console.error(e);
+    alert(e.message);
+    return;
+    
+  }
+}
+
+function makeFullHtml(ColumBase){
+
+  var fullHtml = "";
+
+  for(var i = 1; i < 8; i++){
+
+    var columKey = ColumBase + i;
+
+    var limitcharNum = limitCharNum(columKey);
+
+    var html =columKey +":（" +limitcharNum+  "）<input type=\"text\" id=\"" + columKey +"\" name=\"" + columKey +"\" class = \"input\"　>"
+    selectedGeoKeyList.push(columKey);
+        
+    // 属性情報表示　HTML作成（全文） 
+    fullHtml = fullHtml + (html + '<br>');
+  
+  }
+
+  return fullHtml;
+
+}
+
 // 文字制限表示　メソッド
 function limitCharNum(id){
 
@@ -844,7 +970,10 @@ function limitCharNum(id){
     } else if(id == "p30_006"){
       restrictCharNum = limitNum254 + withinLetter;
     
-    } else if(id == "c23_001"){
+    } else if(id == "p30_007"){
+      restrictCharNum = "任意文字数";
+    
+    }else if(id == "c23_001"){
       restrictCharNum = limitNum5 + withinLetter;
     
     } else if(id == "c23_002"){
@@ -859,10 +988,10 @@ function limitCharNum(id){
     } else if(id == "c23_005"){
       restrictCharNum = limitNum1 + withinLetter;
     
-    } else if(id == "n03_006"){
+    } else if(id == "c23_006"){
       restrictCharNum = limitNum10 + withinLetter;
     
-    } else if(id == "n03_007"){
+    } else if(id == "c23_007"){
       restrictCharNum = limitNum5 + withinLetter;
     
     }
