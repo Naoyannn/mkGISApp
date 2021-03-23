@@ -1,4 +1,4 @@
-import {Feature, Map, View} from 'ol';
+import {Map, View} from 'ol';
 import TileLayer from 'ol/layer/Tile';
 import VectorSource from 'ol/source/Vector';
 import VectorLayer from 'ol/layer/Vector';
@@ -8,7 +8,6 @@ import {click} from 'ol/events/condition';
 import * as olProj from 'ol/proj';
 import GeoJSON from 'ol/format/GeoJSON';
 import OSM from 'ol/source/OSM';
-import PointerInteraction from 'ol/interaction/Pointer';
 
 //選択図形
 var selectedShape;
@@ -180,6 +179,8 @@ function Main(){
     // ドロップダウン　選択・変更時に作動 
     function addInteractions() {
 
+      console.log(map);
+
       // ドロップダウン　選択項目内容取得
       var chosenOpe = typeSelect.value;
       
@@ -212,13 +213,13 @@ function Main(){
           map.addInteraction(snap);
 
         // ライン　描画処理　
-        } else if(chosenOpe == 'LineString'){
+        } else if(chosenOpe == 'MultiLineString'){
 
           removeModify(pointModify, lineModify, porygonModify);
         
           draw = new Draw({　
             source: lineVectorSource,
-            type: 'LineString',
+            type: 'MultiLineString',
           });
           map.addInteraction(draw);
           
@@ -226,13 +227,13 @@ function Main(){
           map.addInteraction(snap);
   
         //　ポリゴン　描画処理
-        } else if(chosenOpe == 'Polygon'){
+        } else if(chosenOpe == 'MultiPolygon'){
 
           removeModify(pointModify, lineModify, porygonModify);
           
           draw = new Draw({　
             source: porygonVectorSource,
-            type: 'Polygon',
+            type: 'MultiPolygon',
           });
           map.addInteraction(draw);
           
@@ -588,8 +589,6 @@ $(function() {
   });
 });
 
-
-
 //　図形削除　処理
 $(function() {
   $('#deleteShape').on('click', function() {
@@ -667,6 +666,136 @@ $(function() {
     }
     catch(e) {
       alert(e.message);
+      console.error(e);
+      return;
+
+    }
+  });
+});
+
+
+//　図形新規登録　処理
+$(function() {
+  $('#saveShape').on('click', function() {
+
+    try{
+
+      // 編集属性情報保持　変数 
+      var featureInfo = {};
+
+      // 選択中　属性情報取得
+      var features = selectedShape.getFeatures();
+      var featureItemData = features.item(0);
+      var originalData = featureItemData.getProperties();
+      var layerType = originalData.geometry.constructor.name;
+      var tableName;
+
+      // 選択中　属性情報　id・テーブル名取得 
+      var data = features.item(0);
+      if(data == null){
+        throw new Error("属性情報が存在しません");
+      }
+   
+      // レイヤタイプによって、保存先テーブル名を決定
+      if (layerType == "MultiPolygon"){
+
+        tableName = "n03-200101_27-g_administrativeboundary";
+  
+      } else if (layerType == "MultiLineString") {
+
+        tableName = "c23-06_27-g_coastline"
+  
+      } else if (layerType == "Point"){
+
+        tableName = "p30-13_27"
+
+      } else {
+  
+        throw new Error("対象テーブルが存在しません")
+
+      }
+      
+      // テーブル名をオブジェクトに格納
+      featureInfo["tableName"] = tableName;
+
+      console.log(featureItemData);
+
+      const geoJsonObject = new GeoJSON();
+      var geoInfoJson = geoJsonObject.writeFeatureObject(featureItemData);
+      
+      // 地理情報をオブジェクトに格納
+      featureInfo["geom"] = geoInfoJson;
+      
+      // 入力データをオブジェクトに格納
+      for(const id of selectedGeoKeyList){
+
+        if(document.getElementById(id).value == null){
+          continue;
+        }
+        var editedInfo = document.getElementById(id).value;
+        
+        featureInfo[id] = editedInfo;
+      }
+
+      // 属性情報編集　処理 
+      var result = window.confirm( "新規図形を保存しますか？");
+      if(result){
+
+        $.ajax({
+          type: 'POST',
+          url: 'http://localhost:1234/saveNewGeometry',
+          dataType: 'json',
+          data: featureInfo,
+
+        //jax　処理成功 
+        }).success(function(data) {
+
+          alert('新規保存が完了しました。')
+
+          var fullHtml = ''; 
+          var i = 0;
+          // 元データを読み込み、更新されているものだけ上書き 
+          for (const [key, value] of Object.entries(data)) { 
+            if(key == "geom" || key =="tableName"){
+              continue;
+            } else {
+              
+              var id = key;
+              var limitcharNum = limitCharNum(id);
+
+              // 属性情報表示　HTML作成（1行） 
+              var html ="（" +limitcharNum+  "）<input type=\"text\" id=\"" + id +"\" name=\"" + id +"\" class = \"input\"　>"
+              selectedGeoKeyList.push(id);
+            
+              // 属性情報表示　HTML作成（行に追加） 
+              fullHtml = fullHtml + (`${key}: ${value}` + html + '<br>');
+            }
+          }
+          document.getElementById('info').innerHTML = fullHtml;
+          porygonVectorSource.refresh();
+          lineVectorSource.refresh();
+          pointVectorSource.refresh();
+
+        // ajax　処理失敗 
+        }).error(function(XMLHttpRequest, textStatus, errorThrown, body, responseText) {
+
+          alert(XMLHttpRequest.responseText);
+          alert('新規登録が失敗しました。');
+          console.log("XMLHttpRequest : " + XMLHttpRequest.status);
+          console.log("textStatus     : " + textStatus);
+          console.log("errorThrown    : " + errorThrown.message); 
+          throw new Error("新規登録が失敗しました。")   
+          
+        });
+
+      } else {
+        alert('新規登録が失敗しました。を中止しました。')
+        
+      }
+    }
+    catch(e) {
+
+      alert(e.message)
       console.error(e);
       return;
 
@@ -863,13 +992,13 @@ function makeNewFeatureInfo(attributeData){
 
   try{
 
-    if(attributeData.geometry.constructor.name == "Polygon"){
+    if(attributeData.geometry.constructor.name == "MultiPolygon"){
 
       fullHtml = makeFullHtml(porygonColumBase);
   
       return fullHtml;
   
-    } else if(attributeData.geometry.constructor.name == "LineString"){
+    } else if(attributeData.geometry.constructor.name == "MultiLineString"){
   
       fullHtml = makeFullHtml(lineColumBase);
   

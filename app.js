@@ -55,6 +55,21 @@ app.post("/delete", (req, res) => {
     }
 });
 
+app.post("/saveNewGeometry", (req, res) => {
+
+    try{
+        var ope = "saveNewGeoInfo"
+
+        connectServer(ope, req, res);
+
+    }
+    catch(e){
+
+        res.send(e) ;
+
+    }
+});
+
 // サーバー通信メソッド
 function connectServer(ope, req, res){
 
@@ -64,15 +79,15 @@ function connectServer(ope, req, res){
         var str = req.body;
         
         //　接続テーブル名取得
-        let tableName = str.tableName;
-
-        //　データユニークID
-        let gid = str.gid;
+        var tableName = str.tableName;
 
         // SQLクエリ
         var query;
 
         if(ope == "update"){
+
+             //　データユニークID
+            var gid = str.gid;
 
             //結合済みクエリ
 
@@ -81,7 +96,15 @@ function connectServer(ope, req, res){
 
         } else if(ope == "delete"){
 
+             //　データユニークID
+            var gid = str.gid;
+
             query = makeDeleteSql(gid, tableName);
+            connect(str, res, query);
+
+        } else if(ope == "saveNewGeoInfo"){
+
+            query = makeSaveNewGeoInfoSql(str, tableName);
             connect(str, res, query);
 
         }
@@ -162,6 +185,168 @@ function makeDeleteSql(gid, tableName){
         throw(errorText);
     }
 }
+
+function makeSaveNewGeoInfoSql(str, tableName){
+
+    var makingQueryKey;
+    var makingQueryValue;
+    var queryAll;
+    
+    try{
+
+        // クエリ作成　結合
+        for (const [key, value] of Object.entries(str)) {
+        
+            resitCharNumLimit(key, value);
+
+            if(key != "tableName" && key != "geom"){
+                if(value != "" && value != null && typeof(value) == "string"){
+                        
+                    if(makingQueryKey == null && makingQueryValue == null){
+                        makingQueryKey = key; 
+                        makingQueryValue = "\'" + value + "\'";
+                    } else {
+                        makingQueryKey = makingQueryKey + ", " + key; 
+                        makingQueryValue = makingQueryValue + ", " + "\'"+  value + "\'"; 
+                    } 
+                }
+            }
+        }
+
+        var geoKey = "geom";
+        var geoValue = str.geom.geometry;
+
+        console.log(geoValue.coordinates);
+        console.log(geoValue.coordinates[0]);
+        console.log(geoValue.coordinates[0][0]);
+        console.log(geoValue.coordinates[0][1]);
+
+        var coordinate;
+
+        if(geoValue.type == "MultiPolygon"){
+
+            coordinate = geoValue.type.toUpperCase() + "(((";
+
+            var j = 0;
+            for(LongiLati of geoValue.coordinates[0][0]){
+
+                console.log(LongiLati);
+
+                for(var i = 0; i< 2; i++){
+
+                    if(i==0){
+    
+                        coordinate = coordinate + LongiLati[i] + " ";
+
+                    }else{
+
+                        coordinate = coordinate + LongiLati[i]
+
+                    }
+                }
+
+                if(j < (geoValue.coordinates[0][0].length - 1 ) ){
+
+                    coordinate = coordinate + ", ";
+
+                }
+
+                j++
+            }
+
+
+        } else if(geoValue.type == "MultiLineString"){
+
+            coordinate = geoValue.type.toUpperCase() + "((";
+
+            var j = 0;
+            for(LongiLati of geoValue.coordinates[0]){
+
+                console.log(LongiLati);
+
+                for(var i = 0; i< 2; i++){
+
+                    if(i==0){
+    
+                        coordinate = coordinate + LongiLati[i] + " ";
+
+                    }else{
+
+                        coordinate = coordinate + LongiLati[i]
+
+                    }
+                }
+
+                if(j < (geoValue.coordinates[0].length - 1 ) ){
+
+                    coordinate = coordinate + ", ";
+
+                }
+
+                j++
+            }
+
+
+        }else if(geoValue.type == "Point"){
+
+            coordinate = geoValue.type.toUpperCase() + "(";
+
+            var j = 0;
+            for(LongiLati of geoValue.coordinates){
+
+                console.log(LongiLati);
+
+                if(j==0){
+    
+                    coordinate = coordinate + LongiLati + " ";
+
+                }else{
+
+                    coordinate = coordinate + LongiLati
+
+                }
+                j++
+            }
+
+        }
+
+        
+        if(geoValue.type == "MultiPolygon"){
+
+            coordinate = coordinate +")))";
+
+        } else if(geoValue.type == "MultiLineString"){
+
+            coordinate = coordinate +"))";
+
+        } else if(geoValue.type == "Point"){
+
+            coordinate = coordinate +")";
+
+        }
+
+        if(makingQueryKey == "" || makingQueryValue == ""){
+            throw new Error("クエリの作成に失敗しました")
+        }
+
+        queryAll = "INSERT INTO " + "\"" + tableName + "\" (" + makingQueryKey + ", " + geoKey + ")" + "VALUES(" + makingQueryValue + ", " + "ST_Transform("+ "ST_GeomFromText(\'"+ coordinate + "\'"+ ",3857),4326"+  "))";
+
+        console.log(queryAll);
+        return queryAll;
+
+    }
+    catch(e){
+
+        if(e == "入力文字数が制限をこえています"){
+            errorText = e;
+        } else {
+            errorText = "クエリの作成に失敗しました";
+        }
+
+        throw(errorText);
+    }
+}
+
 
 //　サーバー通信実施処理
 function connect(str, res, query){
