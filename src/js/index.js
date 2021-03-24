@@ -32,7 +32,7 @@ var limitNum46 = 46;
 var limitNum254 = 254;
 var limitNumSmallinit = 32767;
 
-
+// レイヤソース
 var porygonVectorSource;
 var lineVectorSource;
 var pointVectorSource;
@@ -60,8 +60,9 @@ function Main(){
       },
     });
 
+    //　ベースマップがない場合エラー
     if(porygonVectorSource == null){
-      throw 'No Base Map'
+      throw('No Base Map');
     }
 
     // ポリゴンレイヤ作成
@@ -146,7 +147,7 @@ function Main(){
 
     // マップ調整 
     var view = new View({
-      zoom: 8,
+      zoom: 10,
       center: center,
     })
 
@@ -344,6 +345,7 @@ function Main(){
             if(Object.keys(attributeData).length > 1){
 
               alert("DBに登録されている図形です。図形情報削除ボタンで削除してください");
+              selectedData.clear();
               return;
             }
 
@@ -353,11 +355,13 @@ function Main(){
 
               selectedShape.getLayer(feature.element).getSource().removeFeature(feature.element);
               feature.target.remove(feature.element);
-              map.addInteraction(selectedShape);
+              selectedData.clear();
+              var alertResult = confirm("描画を削除しました。");
 
             } else {
 
               alert("描画を中止しました。");
+              selectedData.clear();
               return;
 
             }
@@ -382,7 +386,7 @@ function Main(){
 
   } catch(e) {
 
-    alert(e.message);
+    alert(e);
     console.error(e);
 
   }
@@ -402,7 +406,7 @@ $(function() {
   $('input[name="checkbox"]').on('change',function() {
     try{
         
-        // チェックボタンの状態を取得 
+      // チェックボタンの状態を取得 
       var polygonFlg = $('#polygon').prop('checked');
       var lineFlg = $('#line').prop('checked');
       var pointFlg = $('#point').prop('checked');
@@ -423,8 +427,11 @@ $(function() {
           if(polygonFlg == false){
             
             layer.setVisible(false);
+            $("#MultiPolygon").prop('disabled', true).addClass('disabled');
+            noShowFeatureInfo();
           } else {
             layer.setVisible(true);
+            $("#MultiPolygon").prop('disabled', false).removeClass('disabled'); 
           }
 
         // チェックボタン　ライン 
@@ -432,8 +439,11 @@ $(function() {
 
           if(lineFlg == false){
             layer.setVisible(false);
+            $("#MultiLineString").prop('disabled', true).addClass('disabled');
+            noShowFeatureInfo();
           }else {
             layer.setVisible(true);
+            $("#MultiLineString").prop('disabled', false).removeClass('disabled'); 
           }
 
         // チェックボタン　ポイント
@@ -441,8 +451,11 @@ $(function() {
 
           if(pointFlg == false){
             layer.setVisible(false);
+            $("#Point").prop('disabled', true).addClass('disabled');
+            noShowFeatureInfo();
           }else {
             layer.setVisible(true);
+            $("#Point").prop('disabled', false).removeClass('disabled'); 
           }
 
         } else {
@@ -450,10 +463,25 @@ $(function() {
           return;
         } 
       });
+      if(polygonFlg === false && lineFlg === false && pointFlg === false){
+
+        $("#type").prop("selectedIndex", 0);
+        $("#Data").prop('disabled', true).addClass('disabled');
+        $("#MoveObj").prop('disabled', true).addClass('disabled');
+        $("#Modify").prop('disabled', true).addClass('disabled');
+        $("#Delete").prop('disabled', true).addClass('disabled');
+        
+      } else {
+        $("#Data").prop('disabled', false).removeClass('disabled'); 
+        $("#MoveObj").prop('disabled', false).removeClass('disabled'); 
+        $("#Modify").prop('disabled', false).removeClass('disabled'); 
+        $("#Delete").prop('disabled', false).removeClass('disabled'); 
+
+      }
     } 
     catch(e) {
 
-      alert(e.message);
+      alert(e);
       console.error(e);
       return;
 
@@ -486,6 +514,7 @@ $(function() {
 
       } else {
 
+        // ID とテーブル名を取得
         var uidTableNameList = data.getId().split( '.' );
 
       }
@@ -494,8 +523,7 @@ $(function() {
         if(j == 0 ){
           //テーブル名がない場合
           if(uidTableNameList[j] == "" || uidTableNameList[j] == null){
-            alert("テーブルが存在しません");
-            throw new Error("テーブルが存在しません");
+            throw("テーブルが存在しません");
           }
           featureInfo["tableName"] = uidTableNameList[j];
 
@@ -527,63 +555,30 @@ $(function() {
         //jax　処理成功 
         }).success(function(data) {
 
-          alert('データの上書きが完了しました。')
+          alert('データの上書きが完了しました。');
 
-          var fullHtml = ''; 
-          var i = 0;
-
-          // 元データを読み込み、更新されているものだけ上書き 
-          for (const [key, value] of Object.entries(originalData)) { 
-            if(i === 0){
-              i++;
-              continue;
-            } else {
-              
-              for (const [key2, value2] of Object.entries(data)) { 
-                if(value2 != "" && value2 != null){
-                  if(key == key2){
-                    value = value2;
-                    features.set(key2, value2);
-                  }
-                } 
-              }
-              
-              var id = key;
-              var limitcharNum = limitCharNum(id);
-
-              // 属性情報表示　HTML作成（1行） 
-              var html ="（" +limitcharNum+  "）<input type=\"text\" id=\"" + id +"\" name=\"" + id +"\" class = \"input\"　>"
-              selectedGeoKeyList.push(id);
-            
-              // 属性情報表示　HTML作成（行に追加） 
-              fullHtml = fullHtml + (`${key}: ${value}` + html + '<br>');
-            }
-          }
-          document.getElementById('info').innerHTML = fullHtml;
-          porygonVectorSource.refresh();
-          lineVectorSource.refresh();
-          pointVectorSource.refresh();
+          // 属性情報・図形情報更新処理後　属性情報再表示処理
+          viewAfUpdate(features, data, originalData)
 
         // ajax　処理失敗 
-        }).error(function(XMLHttpRequest, textStatus, errorThrown, body, responseText) {
+        }).error(function(XMLHttpRequest, textStatus, errorThrown) {
 
-          alert(XMLHttpRequest.responseText);
           alert('上書きが失敗しました。');
           console.log("XMLHttpRequest : " + XMLHttpRequest.status);
           console.log("textStatus     : " + textStatus);
           console.log("errorThrown    : " + errorThrown.message); 
-          throw new Error("上書きが失敗しました")   
+          return;  
           
         });
 
       } else {
-        alert('データの上書きを中止しました。')
+        alert('データの上書きを中止しました。');
         
       }
     }
     catch(e) {
 
-      alert(e.message)
+      alert(e);
       console.error(e);
       return;
 
@@ -604,12 +599,12 @@ $(function() {
       var attributeData = features.item(0);
 
       if(attributeData == null){
-        throw new Error("属性情報が存在しません")
+        throw("属性情報が存在しません")
       }
 
       if(attributeData.getId() == null || attributeData.getId() ==""){
 
-        throw new Error("DBに元データが存在しません。削除できません")
+        throw("DBに元データが存在しません。削除できません");
 
       } else {
 
@@ -622,7 +617,7 @@ $(function() {
           //テーブル名がない場合
           if(uidTableNameList[j] == "" || uidTableNameList[j] == null){
             alert("テーブルが存在しません");
-            throw new Error("テーブルが存在しません");
+            throw("テーブルが存在しません");
           }
           featureInfo["tableName"] = uidTableNameList[j];
 
@@ -644,6 +639,8 @@ $(function() {
         // ajax 処理成功
         }).success(function(data) {
           alert('データを削除しました');
+          noShowFeatureInfo();
+          features.clear();
           porygonVectorSource.refresh();
           lineVectorSource.refresh();
           pointVectorSource.refresh();
@@ -651,23 +648,22 @@ $(function() {
 
         // ajax 処理失敗 
         }).error(function(XMLHttpRequest, textStatus, errorThrown) {
-
           alert(XMLHttpRequest.responseText);
           alert('データの削除に失敗しました');
           console.log("XMLHttpRequest : " + XMLHttpRequest.status);
           console.log("textStatus     : " + textStatus);
           console.log("errorThrown    : " + errorThrown.message);
-          throw new Error("データの削除に失敗しました")   
+          return;
         });
 
       } else {
         
-        alert('図形の削除を中止しました。')
-        throw new Error('図形の削除を中止しました。');
+        alert('図形の削除を中止しました。');
+        return;
       }
     }
     catch(e) {
-      alert(e.message);
+      alert(e);
       console.error(e);
       return;
     }
@@ -694,7 +690,7 @@ $(function() {
       // 選択中　属性情報　id・テーブル名取得 
       var data = features.item(0);
       if(data == null){
-        throw new Error("属性情報が存在しません");
+        throw("属性情報が存在しません");
       }
    
       // レイヤタイプによって、保存先テーブル名を決定
@@ -712,7 +708,7 @@ $(function() {
 
       } else {
   
-        throw new Error("対象テーブルが存在しません")
+        throw("対象テーブルが存在しません")
 
       }
       
@@ -749,31 +745,9 @@ $(function() {
         //jax　処理成功 
         }).success(function(data) {
 
-          alert('新規保存が完了しました。')
-
-          var fullHtml = ''; 
-          var i = 0;
-          // 元データを読み込み、更新されているものだけ上書き 
-          for (const [key, value] of Object.entries(data)) { 
-            if(key == "geom" || key =="tableName"){
-              continue;
-            } else {
-              
-              var id = key;
-              var limitcharNum = limitCharNum(id);
-
-              // 属性情報表示　HTML作成（1行） 
-              var html ="（" +limitcharNum+  "）<input type=\"text\" id=\"" + id +"\" name=\"" + id +"\" class = \"input\"　>"
-              selectedGeoKeyList.push(id);
-            
-              // 属性情報表示　HTML作成（行に追加） 
-              fullHtml = fullHtml + (`${key}: ${value}` + html + '<br>');
-            }
-          }
-          document.getElementById('info').innerHTML = fullHtml;
-          porygonVectorSource.refresh();
-          lineVectorSource.refresh();
-          pointVectorSource.refresh();
+          alert('新規保存が完了しました。');
+          noShowFeatureInfo();
+          features.clear();
 
         // ajax　処理失敗 
         }).error(function(XMLHttpRequest, textStatus, errorThrown, body, responseText) {
@@ -783,24 +757,521 @@ $(function() {
           console.log("XMLHttpRequest : " + XMLHttpRequest.status);
           console.log("textStatus     : " + textStatus);
           console.log("errorThrown    : " + errorThrown.message); 
-          throw new Error("新規登録が失敗しました。")   
+          return;  
           
         });
 
       } else {
-        alert('新規登録が失敗しました。を中止しました。')
+        alert('新規登録を中止しました。');
+        return;
         
       }
     }
     catch(e) {
 
-      alert(e.message)
+      alert(e);
       console.error(e);
       return;
 
     }
   });
 });
+
+//　図形情報更新　処理
+$(function() {
+  $('#updateShape').on('click', function() {
+
+    try{
+
+      // 編集属性情報保持　変数 
+      var featureInfo = {};
+
+      // 選択中　属性情報取得
+      var features = selectedShape.getFeatures();
+      var featureItemData = features.item(0);
+
+      // 選択中　属性情報　id・テーブル名取得 
+      var data = features.item(0);
+      if(data == null){
+        throw("属性情報が存在しません");
+      }
+  
+      if(data.getId() == null || data.getId() ==""){
+
+        throw("DBに元データが存在しません。図形を新規登録して下さい")
+
+      } else {
+
+        // Gid　テーブル名取得
+        var uidTableNameList = data.getId().split( '.' );
+
+      }
+
+      for(let j = 0; j <uidTableNameList.length; j++){
+        if(j == 0 ){
+          //テーブル名がない場合
+          if(uidTableNameList[j] == "" || uidTableNameList[j] == null){
+            throw("テーブルが存在しません");
+          }
+          featureInfo["tableName"] = uidTableNameList[j];
+
+        } else {
+          featureInfo["gid"] = uidTableNameList[j];
+        }
+      }
+      
+      for(const id of selectedGeoKeyList){
+
+        if(document.getElementById(id).value == null){
+          continue;
+        }
+        var editedInfo = document.getElementById(id).value;
+        
+        featureInfo[id] = editedInfo;
+      }
+
+      const geoJsonObject = new GeoJSON();
+      var geoInfoJson = geoJsonObject.writeFeatureObject(featureItemData);
+      
+      // 地理情報をオブジェクトに格納
+      featureInfo["geom"] = geoInfoJson;
+      
+      // 入力データをオブジェクトに格納
+      for(const id of selectedGeoKeyList){
+
+        if(document.getElementById(id).value == null){
+          continue;
+        }
+        var editedInfo = document.getElementById(id).value;
+        
+        featureInfo[id] = editedInfo;
+      }
+
+      // 属性情報編集　処理 
+      var result = window.confirm( "図形情報を更新しますか？");
+      if(result){
+
+        $.ajax({
+          type: 'POST',
+          url: 'http://localhost:1234/updateShape',
+          dataType: 'json',
+          data: featureInfo,
+
+        //jax　処理成功 
+        }).success(function(data) {
+
+          alert('図形情報更新が完了しました。')
+          noShowFeatureInfo();
+          features.clear();
+          porygonVectorSource.refresh();
+          lineVectorSource.refresh();
+          pointVectorSource.refresh();
+
+        // ajax　処理失敗 
+        }).error(function(XMLHttpRequest, textStatus, errorThrown) {
+
+          alert(XMLHttpRequest.responseText);
+          alert('図形情報更新が失敗しました。');
+          console.log("XMLHttpRequest : " + XMLHttpRequest.status);
+          console.log("textStatus     : " + textStatus);
+          console.log("errorThrown    : " + errorThrown.message); 
+          return;
+          
+        });
+      } else {
+        alert('図形情報更新を中止しました。');
+        
+      }
+    }
+    catch(e) {
+
+      alert(e);
+      console.error(e);
+      return;
+
+    }
+  });
+});
+
+// デフォルト設定を切断　メソッド
+function removeModify(point,line, porygon){
+
+  map.removeInteraction(point);
+  map.removeInteraction(line);
+  map.removeInteraction(porygon);
+
+};
+
+// 属性情報　非表示　メソッド
+function noShowFeatureInfo(){
+
+  // 属性情報　編集ボタン　非表示
+  document.getElementById("botton").style.visibility = "hidden"; 
+
+  // 属性情報　非表示
+  document.getElementById('info').innerHTML = "";
+
+};
+
+// 新規描画　属性情報入力HTML表示
+function makeNewFeatureInfo(attributeData){
+
+  var fullHtml;
+  var porygonColumBase = "n03_00";
+  var lineColumBase = "c23_00";
+  var pointColumBase = "p30_00";
+
+  try{
+
+    if(attributeData.geometry.constructor.name == "MultiPolygon"){
+
+      fullHtml = makeFullHtml(porygonColumBase);
+  
+      return fullHtml;
+  
+    } else if(attributeData.geometry.constructor.name == "MultiLineString"){
+  
+      fullHtml = makeFullHtml(lineColumBase);
+  
+      return fullHtml;
+  
+    } else if(attributeData.geometry.constructor.name == "Point"){
+  
+      fullHtml = makeFullHtml(pointColumBase);
+  
+      return fullHtml;
+  
+    } else {
+  
+      throw('レイヤが存在しません。');
+  
+    }
+  }
+
+  catch{
+    
+    console.error(e);
+    alert(e);
+    return;
+    
+  }
+}
+
+function makeFullHtml(ColumBase){
+
+  var fullHtml = "";
+
+  for(var i = 1; i < 8; i++){
+
+    var columKey = ColumBase + i;
+
+    var limitcharNum = limitCharNum(columKey);
+
+    var html =columKey +":（" +limitcharNum+  "）<input type=\"text\" id=\"" + columKey +"\" name=\"" + columKey +"\" class = \"input\"　>"
+    selectedGeoKeyList.push(columKey);
+        
+    // 属性情報表示　HTML作成（全文） 
+    fullHtml = fullHtml + (html + '<br>');
+  
+  }
+
+  return fullHtml;
+
+}
+
+// 属性情報・図形情報更新処理後　属性情報再表示
+function viewAfUpdate(features, data, originalData){
+
+  var fullHtml = ''; 
+  var i = 0;
+
+  // 元データを読み込み、更新されているものだけ上書き 
+  for (const [key, value] of Object.entries(originalData)) { 
+    if(i === 0){
+      i++;
+      continue;
+    } else {
+      
+      for (const [key2, value2] of Object.entries(data)) { 
+        if(value2 != "" && value2 != null){
+          if(key == key2){
+            value = value2;
+            features.set(key2, value2);
+          }
+        } 
+      }
+      
+      var id = key;
+      var limitcharNum = limitCharNum(id);
+
+      // 属性情報表示　HTML作成（1行） 
+      var html ="（" +limitcharNum+  "）<input type=\"text\" id=\"" + id +"\" name=\"" + id +"\" class = \"input\"　>"
+      selectedGeoKeyList.push(id);
+    
+      // 属性情報表示　HTML作成（行に追加） 
+      fullHtml = fullHtml + (`${key}: ${value}` + html + '<br>');
+    }
+  }
+  document.getElementById('info').innerHTML = fullHtml;
+  porygonVectorSource.refresh();
+  lineVectorSource.refresh();
+  pointVectorSource.refresh();
+}
+
+// 文字制限表示　メソッド
+function limitCharNum(id){
+
+  try{
+    var restrictCharNum;
+    var withinLetter = "文字以内";
+
+    if(id == null){
+      throw('保存先Keyが存在しません');
+    }
+
+    // 文字制限　表示作成 
+    else if(id == "n03_001"){
+      restrictCharNum = limitNum8 + withinLetter;
+    
+    } else if(id == "n03_002"){
+      restrictCharNum = limitNum10 + withinLetter;
+    
+    } else if(id == "n03_003"){
+      restrictCharNum = limitNum10 + withinLetter;
+    
+    } else if(id == "n03_004"){
+      restrictCharNum = limitNum14 + withinLetter;
+    
+    } else if(id == "n03_005"){
+      restrictCharNum = limitNum10 + withinLetter;
+    
+    } else if(id == "n03_006"){
+      restrictCharNum = limitNum10 + withinLetter;
+    
+    } else if(id == "n03_007"){
+      restrictCharNum = limitNum5 + withinLetter;
+    
+    } else if(id == "p30_001"){
+      restrictCharNum = limitNum10 + withinLetter;
+    
+    } else if(id == "p30_002"){
+      restrictCharNum = limitNum10 + withinLetter;
+    
+    } else if(id == "p30_003"){
+      restrictCharNum = limitNum14 + withinLetter;
+    
+    } else if(id == "p30_004"){
+      restrictCharNum = limitNum10 + withinLetter;
+    
+    } else if(id == "p30_005"){
+      restrictCharNum = limitNum254 + withinLetter;
+    
+    } else if(id == "p30_006"){
+      restrictCharNum = limitNum254 + withinLetter;
+    
+    } else if(id == "p30_007"){
+      restrictCharNum = "任意文字数";
+    
+    }else if(id == "c23_001"){
+      restrictCharNum = limitNum5 + withinLetter;
+    
+    } else if(id == "c23_002"){
+      restrictCharNum = limitNum1 + withinLetter;
+    
+    } else if(id == "c23_003"){
+      restrictCharNum = limitNum4 + withinLetter;
+    
+    } else if(id == "c23_004"){
+      restrictCharNum = limitNum46 + withinLetter;
+    
+    } else if(id == "c23_005"){
+      restrictCharNum = limitNum1 + withinLetter;
+    
+    } else if(id == "c23_006"){
+      restrictCharNum = limitNum10 + withinLetter;
+    
+    } else if(id == "c23_007"){
+      restrictCharNum = limitNum5 + withinLetter;
+    
+    }
+    return restrictCharNum;
+
+  }
+  catch(e){
+
+    console.error(e);
+    alert(e);
+    return;
+
+  }
+};
+
+// 入力文字数バリデーション　フラグ判定 メソッド
+function checkCharNum(id, count){
+
+  try{
+
+    // 文字数バリデーション
+    
+    if(id == null){    
+
+      throw('保存先Keyが存在しません');
+
+    } else if(id == "n03_001"){
+      if (count <= limitNum8) {
+        unableFlg1 = false;
+      } else {
+        unableFlg1 = true;
+      }
+    } else if(id == "n03_002"){
+      if (count <= limitNum10) {
+        unableFlg2 = false;
+      } else {
+        unableFlg2 = true;
+      }
+    } else if(id == "n03_003"){
+      if (count <= limitNum10) {
+        unableFlg3 = false
+      } else {
+        unableFlg3 = true;
+      }
+    }else if(id == "n03_004"){
+      if (count <= limitNum14) {
+        unableFlg4 = false;     
+      } else {
+        unableFlg4 = true;
+      }  
+    } else if(id == "n03_005"){
+      if (count <= limitNum10) {
+        unableFlg5 = false;   
+      } else {
+        unableFlg5 = true;
+      } 
+    } else if(id == "n03_006"){
+      if (count <= limitNum10) {
+        unableFlg6 = false;    
+      } else {
+        unableFlg6 = true;
+      }    
+    } else if(id == "n03_007"){
+      if (count <= limitNum5) {
+        unableFlg7 = false;
+      } else {
+        unableFlg7 = true;
+      } 
+    } else if(id == "p30_001"){
+      if (count <= limitNum10) {
+        unableFlg1 = false;
+      } else {
+        unableFlg1 = true;
+      }  
+    } else if(id == "p30_002"){
+      if (count <= limitNum10) {
+        unableFlg2 = false;
+      } else {
+        unableFlg2 = true;
+      }
+    } else if(id == "p30_003"){
+      if (count <= limitNum10) {
+        unableFlg3 = false;
+      } else {
+        unableFlg3 = true;
+      } 
+    } else if(id == "p30_004"){
+      if (count <= limitNum10) {
+        unableFlg4 = false;
+      } else {
+        unableFlg4 = true;
+      } 
+    } else if(id == "p30_005"){
+      if (count <= limitNum254) {
+        unableFlg5 = false;
+      } else {
+        unableFlg5 = true;
+      }  
+    } else if(id == "p30_006"){
+      if (count <= limitNum254) {
+        unableFlg6 = false;
+      } else {
+        unableFlg6 = true;
+      }  
+    } else if(id == "p30_007"){
+      if (count <= limitNumSmallinit) {
+        unableFlg7 = false;
+      } else {
+        unableFlg7 = true;
+      }  
+    } else if(id == "c23_001"){
+      if (count <= limitNum5) {
+        unableFlg1 = false;
+      } else {
+        unableFlg1 = true;
+      } 
+    } else if(id == "c23_002"){
+      if (count <= limitNum1) {
+        unableFlg2 = false;
+      } else {
+        unableFlg2 = true;
+      } 
+    } else if(id == "c23_003"){
+      if (count <= limitNum4) {
+        unableFlg3 = false;
+      } else {
+        unableFlg3 = true;
+      }
+    } else if(id == "c23_004"){
+      if (count <= limitNum46) {
+        unableFlg4 = false;
+      } else {
+        unableFlg4 = true;
+      }    
+    } else if(id == "c23_005"){
+      if (count <= limitNum1) {
+        unableFlg5 = false;
+      } else {
+        unableFlg5 = true;
+      }    
+    } else if(id == "c23_006"){
+      if (count <= limitNum10) {
+        unableFlg6 = false;
+      } else {
+        unableFlg6 = true; 
+      }    
+    } else if(id == "c23_007"){
+      if (count <= limitNum5) {
+        unableFlg7 = false;
+      } else {
+        unableFlg7 = true;
+      }    
+    }
+
+    // 更新ボタン　表示　非表示
+    if(unableFlg1 == false && unableFlg2 == false && unableFlg3 == false 
+      && unableFlg4 == false && unableFlg5 == false && unableFlg6 == false && unableFlg7 == false ){
+              
+      // ボタン表示 
+      $("#editFeatureInfo").prop('disabled', false).removeClass('disabled');
+      $("#saveShape").prop('disabled', false).removeClass('disabled');
+      $("#updateShape").prop('disabled', false).removeClass('disabled');
+    }else {
+    
+    // ボタン非表示 
+      $("#editFeatureInfo").prop('disabled', true).addClass('disabled');
+      $("#saveShape").prop('disabled', true).addClass('disabled');
+      $("#updateShape").prop('disabled', true).addClass('disabled');
+      
+    }
+
+  }
+
+  catch(e) {
+
+    console.error(e);
+    alert(e);
+    return;
+  }
+}
+
 
 // 属性情報　編集　バリデーション　処理 
 $(function(){
@@ -959,341 +1430,3 @@ $(function(){
     }  
   });
 });
-
-// デフォルト設定を切断　メソッド
-function removeModify(point,line, porygon){
-
-  map.removeInteraction(point);
-  map.removeInteraction(line);
-  map.removeInteraction(porygon);
-
-};
-
-// 属性情報　非表示　メソッド
-function noShowFeatureInfo(){
-
-  // 属性情報　編集ボタン　非表示
-  document.getElementById("botton").style.visibility = "hidden"; 
-
-  // 属性情報　非表示
-  document.getElementById('info').innerHTML = "";
-
-};
-
-// 新規描画　属性情報入力HTML表示
-function makeNewFeatureInfo(attributeData){
-
-  var fullHtml;
-  var porygonColumBase = "n03_00";
-  var lineColumBase = "c23_00";
-  var pointColumBase = "p30_00";
-
-  try{
-
-    if(attributeData.geometry.constructor.name == "MultiPolygon"){
-
-      fullHtml = makeFullHtml(porygonColumBase);
-  
-      return fullHtml;
-  
-    } else if(attributeData.geometry.constructor.name == "MultiLineString"){
-  
-      fullHtml = makeFullHtml(lineColumBase);
-  
-      return fullHtml;
-  
-    } else if(attributeData.geometry.constructor.name == "Point"){
-  
-      fullHtml = makeFullHtml(pointColumBase);
-  
-      return fullHtml;
-  
-    } else {
-  
-      throw new Error('レイヤが存在しません。');
-  
-    }
-  }
-
-  catch{
-    
-    console.error(e);
-    alert(e.message);
-    return;
-    
-  }
-}
-
-function makeFullHtml(ColumBase){
-
-  var fullHtml = "";
-
-  for(var i = 1; i < 8; i++){
-
-    var columKey = ColumBase + i;
-
-    var limitcharNum = limitCharNum(columKey);
-
-    var html =columKey +":（" +limitcharNum+  "）<input type=\"text\" id=\"" + columKey +"\" name=\"" + columKey +"\" class = \"input\"　>"
-    selectedGeoKeyList.push(columKey);
-        
-    // 属性情報表示　HTML作成（全文） 
-    fullHtml = fullHtml + (html + '<br>');
-  
-  }
-
-  return fullHtml;
-
-}
-
-// 文字制限表示　メソッド
-function limitCharNum(id){
-
-  try{
-    var restrictCharNum;
-    var withinLetter = "文字以内";
-
-    if(id == null){
-      throw new Error('保存先Keyが存在しません');
-    }
-
-    // 文字制限　表示作成 
-    else if(id == "n03_001"){
-      restrictCharNum = limitNum8 + withinLetter;
-    
-    } else if(id == "n03_002"){
-      restrictCharNum = limitNum10 + withinLetter;
-    
-    } else if(id == "n03_003"){
-      restrictCharNum = limitNum10 + withinLetter;
-    
-    } else if(id == "n03_004"){
-      restrictCharNum = limitNum14 + withinLetter;
-    
-    } else if(id == "n03_005"){
-      restrictCharNum = limitNum10 + withinLetter;
-    
-    } else if(id == "n03_006"){
-      restrictCharNum = limitNum10 + withinLetter;
-    
-    } else if(id == "n03_007"){
-      restrictCharNum = limitNum5 + withinLetter;
-    
-    } else if(id == "p30_001"){
-      restrictCharNum = limitNum10 + withinLetter;
-    
-    } else if(id == "p30_002"){
-      restrictCharNum = limitNum10 + withinLetter;
-    
-    } else if(id == "p30_003"){
-      restrictCharNum = limitNum14 + withinLetter;
-    
-    } else if(id == "p30_004"){
-      restrictCharNum = limitNum10 + withinLetter;
-    
-    } else if(id == "p30_005"){
-      restrictCharNum = limitNum254 + withinLetter;
-    
-    } else if(id == "p30_006"){
-      restrictCharNum = limitNum254 + withinLetter;
-    
-    } else if(id == "p30_007"){
-      restrictCharNum = "任意文字数";
-    
-    }else if(id == "c23_001"){
-      restrictCharNum = limitNum5 + withinLetter;
-    
-    } else if(id == "c23_002"){
-      restrictCharNum = limitNum1 + withinLetter;
-    
-    } else if(id == "c23_003"){
-      restrictCharNum = limitNum4 + withinLetter;
-    
-    } else if(id == "c23_004"){
-      restrictCharNum = limitNum46 + withinLetter;
-    
-    } else if(id == "c23_005"){
-      restrictCharNum = limitNum1 + withinLetter;
-    
-    } else if(id == "c23_006"){
-      restrictCharNum = limitNum10 + withinLetter;
-    
-    } else if(id == "c23_007"){
-      restrictCharNum = limitNum5 + withinLetter;
-    
-    }
-    return restrictCharNum;
-
-  }
-  catch(e){
-
-    console.error(e);
-    alert(e.message);
-    return;
-
-  }
-};
-
-// 入力文字数バリデーション　フラグ判定 メソッド
-function checkCharNum(id, count){
-
-  try{
-
-    // 文字数バリデーション
-    
-    if(id == null){    
-
-      throw new Error('保存先Keyが存在しません');
-
-    } else if(id == "n03_001"){
-      if (count <= limitNum8) {
-        unableFlg1 = false;
-      } else {
-        unableFlg1 = true;
-      }
-    } else if(id == "n03_002"){
-      if (count <= limitNum10) {
-        unableFlg2 = false;
-      } else {
-        unableFlg2 = true;
-      }
-    } else if(id == "n03_003"){
-      if (count <= limitNum10) {
-        unableFlg3 = false
-      } else {
-        unableFlg3 = true;
-      }
-    }else if(id == "n03_004"){
-      if (count <= limitNum14) {
-        unableFlg4 = false;     
-      } else {
-        unableFlg4 = true;
-      }  
-    } else if(id == "n03_005"){
-      if (count <= limitNum10) {
-        unableFlg5 = false;   
-      } else {
-        unableFlg5 = true;
-      } 
-    } else if(id == "n03_006"){
-      if (count <= limitNum10) {
-        unableFlg6 = false;    
-      } else {
-        unableFlg6 = true;
-      }    
-    } else if(id == "n03_007"){
-      if (count <= limitNum5) {
-        unableFlg7 = false;
-      } else {
-        unableFlg7 = true;
-      } 
-    } else if(id == "p30_001"){
-      if (count <= limitNum10) {
-        unableFlg1 = false;
-      } else {
-        unableFlg1 = true;
-      }  
-    } else if(id == "p30_002"){
-      if (count <= limitNum10) {
-        unableFlg2 = false;
-      } else {
-        unableFlg2 = true;
-      }
-    } else if(id == "p30_003"){
-      if (count <= limitNum10) {
-        unableFlg3 = false;
-      } else {
-        unableFlg3 = true;
-      } 
-    } else if(id == "p30_004"){
-      if (count <= limitNum10) {
-        unableFlg4 = false;
-      } else {
-        unableFlg4 = true;
-      } 
-    } else if(id == "p30_005"){
-      if (count <= limitNum254) {
-        unableFlg5 = false;
-      } else {
-        unableFlg5 = true;
-      }  
-    } else if(id == "p30_006"){
-      if (count <= limitNum254) {
-        unableFlg6 = false;
-      } else {
-        unableFlg6 = true;
-      }  
-    } else if(id == "p30_007"){
-      if (count <= limitNumSmallinit) {
-        unableFlg7 = false;
-      } else {
-        unableFlg7 = true;
-      }  
-    } else if(id == "c23_001"){
-      if (count <= limitNum5) {
-        unableFlg1 = false;
-      } else {
-        unableFlg1 = true;
-      } 
-    } else if(id == "c23_002"){
-      if (count <= limitNum1) {
-        unableFlg2 = false;
-      } else {
-        unableFlg2 = true;
-      } 
-    } else if(id == "c23_003"){
-      if (count <= limitNum4) {
-        unableFlg3 = false;
-      } else {
-        unableFlg3 = true;
-      }
-    } else if(id == "c23_004"){
-      if (count <= limitNum46) {
-        unableFlg4 = false;
-      } else {
-        unableFlg4 = true;
-      }    
-    } else if(id == "c23_005"){
-      if (count <= limitNum1) {
-        unableFlg5 = false;
-      } else {
-        unableFlg5 = true;
-      }    
-    } else if(id == "c23_006"){
-      if (count <= limitNum10) {
-        unableFlg6 = false;
-      } else {
-        unableFlg6 = true; 
-      }    
-    } else if(id == "c23_007"){
-      if (count <= limitNum5) {
-        unableFlg7 = false;
-      } else {
-        unableFlg7 = true;
-      }    
-    }
-
-    // 更新ボタン　表示　非表示
-    if(unableFlg1 == false && unableFlg2 == false && unableFlg3 == false 
-      && unableFlg4 == false && unableFlg5 == false && unableFlg6 == false && unableFlg7 == false ){
-              
-      // ボタン表示 
-      $("#editFeatureInfo").prop('disabled', false).removeClass('disabled');
-      $("#saveShape").prop('disabled', false).removeClass('disabled');
-    }else {
-    
-    // ボタン非表示 
-      $("#editFeatureInfo").prop('disabled', true).addClass('disabled');
-      $("#saveShape").prop('disabled', true).addClass('disabled');
-    }
-  }
-
-  catch(e) {
-
-    console.error(e);
-    alert(e.message);
-    return;
-  }
-}
-
-

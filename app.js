@@ -7,7 +7,6 @@ var {Client} = require('pg');
 const path = require('path');
 const e = require("express");
 
-
 // 2-1. listen()メソッドを実行して1234番ポートで待ち受け。
 var server = app.listen(1234, function(){
     console.log("Node.js is listening to PORT:" + server.address().port);
@@ -33,7 +32,7 @@ app.post("/savefeature", (req, res) => {
     }
     catch(e){
 
-        res.send(e) ;
+        res.send(e);
 
     }
 });
@@ -49,7 +48,7 @@ app.post("/delete", (req, res) => {
     }
     catch(e){
 
-        res.send(e) ;
+        res.send(e);
 
     }
 });
@@ -57,14 +56,30 @@ app.post("/delete", (req, res) => {
 app.post("/saveNewGeometry", (req, res) => {
 
     try{
-        var ope = "saveNewGeoInfo"
+        var ope = "saveNewGeoInfo";
 
         connectServer(ope, req, res);
 
     }
     catch(e){
 
-        res.send(e) ;
+        res.send(e);
+
+    }
+});
+
+//　属性情報登録処理
+app.post("/updateShape", (req, res) => {
+
+    try{
+        var ope = "updateShape";
+
+        connectServer(ope, req, res);
+
+    }
+    catch(e){
+
+        res.send(e);
 
     }
 });
@@ -85,12 +100,11 @@ function connectServer(ope, req, res){
 
         if(ope == "update"){
 
-             //　データユニークID
+            //　データユニークID
             var gid = str.gid;
 
             //結合済みクエリ
-
-            query = makeUpdateSql(ope, str, gid, tableName)
+            query = makeUpdateSql(ope, str, gid, tableName);
             connect(str, res, query);
 
         } else if(ope == "delete"){
@@ -106,6 +120,14 @@ function connectServer(ope, req, res){
             query = makeSaveNewGeoInfoSql(ope, str, tableName);
             connect(str, res, query);
 
+        } else if(ope == "updateShape"){
+
+            //　データユニークID
+            var gid = str.gid;
+
+            //結合済みクエリ
+            query = updateShape(gid, ope, str, tableName);
+            connect(str, res, query);
         }
     } catch(e) {
 
@@ -135,18 +157,20 @@ function makeUpdateSql(ope, str, gid, tableName){
         // クエリ作成　結合
         makingQuery = unionQuery(ope, str);
 
-    if(makingQuery == null){
-        throw new Error("クエリの作成に失敗しました")
-    }
-    
-    queryAll = "UPDATE " + "\"" + tableName + "\"" + makingQuery + "WHERE gid = " + gid;
+        if(makingQuery == null){
+            throw("更新情報がありません");
 
-    return queryAll;
+        }
+        
+        queryAll = "UPDATE " + "\"" + tableName + "\"" + makingQuery + "WHERE gid = " + gid;
+
+        return queryAll;
 
     }
     catch(e){
 
-        if(e == "入力文字数が制限をこえています"){
+
+        if(e != "クエリの作成に失敗しました"){
             errorText = e;
         } else {
             errorText = "クエリの作成に失敗しました";
@@ -220,7 +244,7 @@ function makeSaveNewGeoInfoSql(ope, str, tableName){
                     if(i==0){
                         coordinate = coordinate + LongiLati[i] + " ";
                     }else{
-                        coordinate = coordinate + LongiLati[i]
+                        coordinate = coordinate + LongiLati[i];
                     }
                 }
 
@@ -242,7 +266,7 @@ function makeSaveNewGeoInfoSql(ope, str, tableName){
                 if(j==0){
                     coordinate = coordinate + LongiLati + " ";
                 }else{
-                    coordinate = coordinate + LongiLati
+                    coordinate = coordinate + LongiLati;
                 }
                 j++
             }
@@ -266,7 +290,113 @@ function makeSaveNewGeoInfoSql(ope, str, tableName){
     }
     catch(e){
 
-        if(e == "入力文字数が制限をこえています"){
+        if(e != "クエリの作成に失敗しました"){
+            errorText = e;
+        } else {
+            errorText = "クエリの作成に失敗しました";
+        }
+        throw(errorText);
+    }
+}
+
+function updateShape(gid, ope, str, tableName){
+
+    var makingQuery;
+    var queryAll;
+    var geoKey = "geom";
+    var geoValue = str.geom.geometry;
+    var coordinate;
+    
+    try{
+
+        // クエリ作成　結合
+        makingQuery = unionQuery(ope, str);
+
+        if(geoValue.type == "MultiPolygon"){
+
+            coordinate = geoValue.type.toUpperCase() + "(((";
+
+            var j = 0;
+            for(LongiLati of geoValue.coordinates[0][0]){
+
+                for(var i = 0; i< 2; i++){
+
+                    if(i==0){
+                        coordinate = coordinate + LongiLati[i] + " ";
+                    }else{
+                        coordinate = coordinate + LongiLati[i]
+                    }
+                }
+
+                if(j < (geoValue.coordinates[0][0].length - 1 ) ){
+                    coordinate = coordinate + ", ";
+                }
+                j++
+            }
+
+            coordinate = coordinate +")))";
+
+        } else if(geoValue.type == "MultiLineString"){
+
+            coordinate = geoValue.type.toUpperCase() + "((";
+
+            var j = 0;
+            for(LongiLati of geoValue.coordinates[0]){
+
+                for(var i = 0; i< 2; i++){
+
+                    if(i==0){
+                        coordinate = coordinate + LongiLati[i] + " ";
+                    }else{
+                        coordinate = coordinate + LongiLati[i];
+                    }
+                }
+
+                if(j < (geoValue.coordinates[0].length - 1 ) ){
+                    coordinate = coordinate + ", ";
+                }
+                j++
+            }
+
+            coordinate = coordinate +"))";
+
+        }else if(geoValue.type == "Point"){
+
+            coordinate = geoValue.type.toUpperCase() + "(";
+
+            var j = 0;
+            for(LongiLati of geoValue.coordinates){
+
+                if(j==0){
+                    coordinate = coordinate + LongiLati + " ";
+                }else{
+                    coordinate = coordinate + LongiLati;
+                }
+                j++
+            }
+
+            coordinate = coordinate +")";
+
+        }
+
+        if(makingQuery == null){
+
+            
+            queryAll = "UPDATE " + "\"" + tableName + "\"" + " SET " + geoKey + " = "+ "ST_Transform("+ "ST_GeomFromText(\'"+ coordinate + "\'"+ ",3857),4326"+  ")" + "WHERE gid = " + gid;
+            
+        } else {
+
+
+            queryAll = "UPDATE " + "\"" + tableName + "\"" + makingQuery + geoKey + "="+ "ST_Transform("+ "ST_GeomFromText(\'"+ coordinate + "\'"+ ",3857),4326"+  ")" + "WHERE gid = " + gid;
+
+        }
+
+        return queryAll;
+
+    }
+    catch(e){
+
+        if(e != "クエリの作成に失敗しました"){
             errorText = e;
         } else {
             errorText = "クエリの作成に失敗しました";
@@ -292,12 +422,12 @@ function connect(str, res, query){
         client.connect((err) => {
             if (err) {
                 console.log('error connecting: ' + err.stack);
-                throw new Error("SQLの通信に失敗しました")
+                throw new Error("SQLの通信に失敗しました");
             } else {
                 client.query(query, function (err, result) {
                     if(err){
                         console.log('error connecting: ' + err.stack);
-                        throw new Error("クエリの実行に失敗しました")
+                        throw new Error("クエリの実行に失敗しました");
                     }
                     client.end();
                     res.send(str);
@@ -312,6 +442,62 @@ function connect(str, res, query){
         
         throw(errorText);
     }
+}
+
+function unionQuery(ope, str){
+
+    var makingQuery;
+    var makingQueryKey;
+    var makingQueryValue;
+
+    for (const [key, value] of Object.entries(str)) {
+        
+        resitCharNumLimit(key, value);
+
+        if(key != "tableName" && key != "geom" && key != "gid"){
+            if(value != "" && value != null && typeof(value) == "string"){
+
+                if(ope == "update"){
+
+                    if(makingQuery == null){
+                        makingQuery = "SET " + key + "=" + "'" + value + "'"; 
+                    } else {
+                        makingQuery = makingQuery + ", " + key + "=" + "'" + value + "'"; 
+                    } 
+                }
+                
+                if(ope == "saveNewGeoInfo"){
+
+                    if(makingQueryKey == null && makingQueryValue == null){
+                        makingQueryKey = key; 
+                        makingQueryValue = "\'" + value + "\'";
+                    } else {
+                        makingQueryKey = makingQueryKey + ", " + key; 
+                        makingQueryValue = makingQueryValue + ", " + "\'"+  value + "\'"; 
+                    } 
+                }
+
+                if(ope == "updateShape"){
+
+                    if(makingQuery == null){
+                        makingQuery = "SET " + key + "=" + "'" + value + "',"; 
+                    } else {
+                        makingQuery = makingQuery + key + "=" + "'" + value + "',"; 
+                    } 
+                }
+            }
+        }
+    }
+
+    if(ope == "saveNewGeoInfo"){
+
+        makingQuery = new Array();
+        makingQuery.push(makingQueryKey);
+        makingQuery.push(makingQueryValue);
+
+    }
+
+    return makingQuery;
 }
 
 // 登録文字数　バリデーション
@@ -381,57 +567,8 @@ function resitCharNumLimit(key, value){
     }
     catch(e){
 
-        errorText = "入力文字数が制限をこえています"
+        errorText = "入力文字数が制限をこえています";
 
         throw(errorText);
     } 
-}
-
-function unionQuery(ope, str){
-
-    var makingQuery;
-    var makingQueryKey;
-    var makingQueryValue;
-
-    for (const [key, value] of Object.entries(str)) {
-        
-        resitCharNumLimit(key, value);
-
-        if(key != "tableName" && key != "geom"){
-            if(value != "" && value != null && typeof(value) == "string"){
-
-                if(ope == "update"){
-
-                    if(makingQuery == null){
-                        makingQuery = "SET " + key + "=" + "'" + value + "'"; 
-                    } else {
-                        makingQuery = makingQuery + ", " + key + "=" + "'" + value + "'"; 
-                    } 
-                }
-                
-                if(ope == "saveNewGeoInfo"){
-
-                    if(makingQueryKey == null && makingQueryValue == null){
-                        makingQueryKey = key; 
-                        makingQueryValue = "\'" + value + "\'";
-                    } else {
-                        makingQueryKey = makingQueryKey + ", " + key; 
-                        makingQueryValue = makingQueryValue + ", " + "\'"+  value + "\'"; 
-                    } 
-
-                }
-            }
-        }
-    }
-
-    if(ope == "saveNewGeoInfo"){
-
-        makingQuery = new Array()
-
-        makingQuery.push(makingQueryKey);
-        makingQuery.push(makingQueryValue);
-
-    }
-
-    return makingQuery;
 }
