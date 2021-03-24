@@ -134,25 +134,8 @@ function makeUpdateSql(ope, str, gid, tableName){
     
     try{
 
-         // クエリ作成　結合
+        // クエリ作成　結合
         makingQuery = unionQuery(ope, str);
-
-       
-        // for (const [key, value] of Object.entries(str)) {
-        
-        //     resitCharNumLimit(key, value);
-
-        //     if(key != "tableName" && key != "gid"){
-        //         if(value != "" && value != null && typeof(value) == "string"){
-                        
-        //             if(makingQuery == null){
-        //                 makingQuery = "SET " + key + "=" + "'" + value + "'"; 
-        //             } else {
-        //                 makingQuery = makingQuery + ", " + key + "=" + "'" + value + "'"; 
-        //             } 
-        //         }
-        //     }
-        // }
 
     if(makingQuery == null){
         throw new Error("クエリの作成に失敗しました")
@@ -192,8 +175,6 @@ function makeDeleteSql(gid, tableName){
 
 function makeSaveNewGeoInfoSql(ope, str, tableName){
 
-    // var makingQueryKey;
-    // var makingQueryValue;
     var makingQuery;
     var queryAll;
     var geoKey = "geom";
@@ -202,28 +183,8 @@ function makeSaveNewGeoInfoSql(ope, str, tableName){
     
     try{
 
-        makingQuery = unionQuery(ope, str);
-
-        console.log(makingQuery);
-
         // クエリ作成　結合
-        // for (const [key, value] of Object.entries(str)) {
-        
-        //     resitCharNumLimit(key, value);
-
-        //     if(key != "tableName" && key != "geom"){
-        //         if(value != "" && value != null && typeof(value) == "string"){
-                        
-        //             if(makingQuery[0] == null && makingQuery[1] == null){
-        //                 makingQuery[0] = key; 
-        //                 makingQuery[1] = "\'" + value + "\'";
-        //             } else {
-        //                 makingQuery[0] = makingQuery[0] + ", " + key; 
-        //                 makingQuery[1] = makingQuery[1] + ", " + "\'"+  value + "\'"; 
-        //             } 
-        //         }
-        //     }
-        // }
+        makingQuery = unionQuery(ope, str);
 
         if(geoValue.type == "MultiPolygon"){
 
