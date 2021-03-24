@@ -51,14 +51,13 @@ function Main(){
     porygonVectorSource = new VectorSource({
       format: new GeoJSON(),
 
-      // 行政区画レイヤURL
-      url: 'http://localhost:8080/geoserver/gisdb/ows' +
-              '?service=WFS'+
-              '&version=1.0.0'+
-              '&request=GetFeature'+
-              '&typeName=gisdb%3An03-200101_27-g_administrativeboundary'+
-              '&outputFormat=application%2Fjson'+
-              '&srsname=EPSG:4326&',
+      url: function () {
+        return (
+          'http://localhost:8080/geoserver/wfs?service=WFS&' +
+          'version=1.1.0&request=GetFeature&typename=gisdb%3An03-200101_27-g_administrativeboundary&' +
+          'outputFormat=application/json&srsname=EPSG:4326&'
+        );
+      },
     });
 
     if(porygonVectorSource == null){
@@ -85,15 +84,14 @@ function Main(){
     // ラインレイヤ読み込み 
     lineVectorSource = new VectorSource({
       format: new GeoJSON(),
+      url: function () {
+        return (
+          'http://localhost:8080/geoserver/wfs?service=WFS&' +
+          'version=1.1.0&request=GetFeature&typename=gisdb%3Ac23-06_27-g_coastline&' +
+          'outputFormat=application/json&srsname=EPSG:4326&'
+        );
+      },
 
-      // 海岸レイヤURL
-      url: 'http://localhost:8080/geoserver/gisdb/ows' +
-              '?service=WFS'+
-              '&version=1.0.0'+
-              '&request=GetFeature'+
-              '&typeName=gisdb%3Ac23-06_27-g_coastline'+
-              '&outputFormat=application%2Fjson'+
-              '&srsname=EPSG:4326&',
     });
 
     // ラインレイヤ作成
@@ -117,14 +115,13 @@ function Main(){
     pointVectorSource = new VectorSource({
       format: new GeoJSON(),
 
-      // 郵便局レイヤ URL
-      url: 'http://localhost:8080/geoserver/gisdb/ows'+
-              '?service=WFS'+
-              '&version=1.0.0'+
-              '&request=GetFeature'+
-              '&typeName=gisdb%3Ap30-13_27'+
-              '&outputFormat=application%2Fjson'+
-              '&srsname=EPSG:4326&',
+      url: function () {
+        return (
+          'http://localhost:8080/geoserver/wfs?service=WFS&' +
+          'version=1.1.0&request=GetFeature&typename=gisdb%3Ap30-13_27&' +
+          'outputFormat=application/json&srsname=EPSG:4326&'
+        );
+      },
     });
 
     // ポイントレイヤ作成 
@@ -178,8 +175,6 @@ function Main(){
 
     // ドロップダウン　選択・変更時に作動 
     function addInteractions() {
-
-      console.log(map);
 
       // ドロップダウン　選択項目内容取得
       var chosenOpe = typeSelect.value;
@@ -718,8 +713,6 @@ $(function() {
       // テーブル名をオブジェクトに格納
       featureInfo["tableName"] = tableName;
 
-      console.log(featureItemData);
-
       const geoJsonObject = new GeoJSON();
       var geoInfoJson = geoJsonObject.writeFeatureObject(featureItemData);
       
@@ -952,7 +945,6 @@ $(function(){
           },
         });
       }
-
     } 
     catch(e) {
 
@@ -1281,10 +1273,12 @@ function checkCharNum(id, count){
               
       // ボタン表示 
       $("#editFeatureInfo").prop('disabled', false).removeClass('disabled');
+      $("#saveShape").prop('disabled', false).removeClass('disabled');
     }else {
     
     // ボタン非表示 
       $("#editFeatureInfo").prop('disabled', true).addClass('disabled');
+      $("#saveShape").prop('disabled', true).addClass('disabled');
     }
   }
 

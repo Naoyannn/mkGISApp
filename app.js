@@ -8,6 +8,7 @@ const path = require('path');
 const { error } = require("console");
 const { nextTick } = require("process");
 const e = require("express");
+const { compilation } = require("webpack");
 
 // 2-1. listen()メソッドを実行して1234番ポートで待ち受け。
 var server = app.listen(1234, function(){
@@ -91,7 +92,7 @@ function connectServer(ope, req, res){
 
             //結合済みクエリ
 
-            query = makeUpdateSql(str, gid, tableName)
+            query = makeUpdateSql(ope, str, gid, tableName)
             connect(str, res, query);
 
         } else if(ope == "delete"){
@@ -104,7 +105,7 @@ function connectServer(ope, req, res){
 
         } else if(ope == "saveNewGeoInfo"){
 
-            query = makeSaveNewGeoInfoSql(str, tableName);
+            query = makeSaveNewGeoInfoSql(ope, str, tableName);
             connect(str, res, query);
 
         }
@@ -126,31 +127,34 @@ function connectServer(ope, req, res){
     }
 }
 
-function makeUpdateSql(str, gid, tableName){
+function makeUpdateSql(ope, str, gid, tableName){
     
     var makingQuery;
     var queryAll;
     
     try{
 
-        // クエリ作成　結合
-        for (const [key, value] of Object.entries(str)) {
+         // クエリ作成　結合
+        makingQuery = unionQuery(ope, str);
+
+       
+        // for (const [key, value] of Object.entries(str)) {
         
-            resitCharNumLimit(key, value);
+        //     resitCharNumLimit(key, value);
 
-            if(key != "tableName" && key != "gid"){
-                if(value != "" && value != null && typeof(value) == "string"){
+        //     if(key != "tableName" && key != "gid"){
+        //         if(value != "" && value != null && typeof(value) == "string"){
                         
-                    if(makingQuery == null){
-                        makingQuery = "SET " + key + "=" + "'" + value + "'"; 
-                    } else {
-                        makingQuery = makingQuery + ", " + key + "=" + "'" + value + "'"; 
-                    } 
-                }
-            }
-        }
+        //             if(makingQuery == null){
+        //                 makingQuery = "SET " + key + "=" + "'" + value + "'"; 
+        //             } else {
+        //                 makingQuery = makingQuery + ", " + key + "=" + "'" + value + "'"; 
+        //             } 
+        //         }
+        //     }
+        // }
 
-    if(makingQuery == ""){
+    if(makingQuery == null){
         throw new Error("クエリの作成に失敗しました")
     }
     
@@ -186,42 +190,40 @@ function makeDeleteSql(gid, tableName){
     }
 }
 
-function makeSaveNewGeoInfoSql(str, tableName){
+function makeSaveNewGeoInfoSql(ope, str, tableName){
 
-    var makingQueryKey;
-    var makingQueryValue;
+    // var makingQueryKey;
+    // var makingQueryValue;
+    var makingQuery;
     var queryAll;
+    var geoKey = "geom";
+    var geoValue = str.geom.geometry;
+    var coordinate;
     
     try{
 
+        makingQuery = unionQuery(ope, str);
+
+        console.log(makingQuery);
+
         // クエリ作成　結合
-        for (const [key, value] of Object.entries(str)) {
+        // for (const [key, value] of Object.entries(str)) {
         
-            resitCharNumLimit(key, value);
+        //     resitCharNumLimit(key, value);
 
-            if(key != "tableName" && key != "geom"){
-                if(value != "" && value != null && typeof(value) == "string"){
+        //     if(key != "tableName" && key != "geom"){
+        //         if(value != "" && value != null && typeof(value) == "string"){
                         
-                    if(makingQueryKey == null && makingQueryValue == null){
-                        makingQueryKey = key; 
-                        makingQueryValue = "\'" + value + "\'";
-                    } else {
-                        makingQueryKey = makingQueryKey + ", " + key; 
-                        makingQueryValue = makingQueryValue + ", " + "\'"+  value + "\'"; 
-                    } 
-                }
-            }
-        }
-
-        var geoKey = "geom";
-        var geoValue = str.geom.geometry;
-
-        console.log(geoValue.coordinates);
-        console.log(geoValue.coordinates[0]);
-        console.log(geoValue.coordinates[0][0]);
-        console.log(geoValue.coordinates[0][1]);
-
-        var coordinate;
+        //             if(makingQuery[0] == null && makingQuery[1] == null){
+        //                 makingQuery[0] = key; 
+        //                 makingQuery[1] = "\'" + value + "\'";
+        //             } else {
+        //                 makingQuery[0] = makingQuery[0] + ", " + key; 
+        //                 makingQuery[1] = makingQuery[1] + ", " + "\'"+  value + "\'"; 
+        //             } 
+        //         }
+        //     }
+        // }
 
         if(geoValue.type == "MultiPolygon"){
 
@@ -230,30 +232,22 @@ function makeSaveNewGeoInfoSql(str, tableName){
             var j = 0;
             for(LongiLati of geoValue.coordinates[0][0]){
 
-                console.log(LongiLati);
-
                 for(var i = 0; i< 2; i++){
 
                     if(i==0){
-    
                         coordinate = coordinate + LongiLati[i] + " ";
-
                     }else{
-
                         coordinate = coordinate + LongiLati[i]
-
                     }
                 }
 
                 if(j < (geoValue.coordinates[0][0].length - 1 ) ){
-
                     coordinate = coordinate + ", ";
-
                 }
-
                 j++
             }
 
+            coordinate = coordinate +")))";
 
         } else if(geoValue.type == "MultiLineString"){
 
@@ -267,25 +261,19 @@ function makeSaveNewGeoInfoSql(str, tableName){
                 for(var i = 0; i< 2; i++){
 
                     if(i==0){
-    
                         coordinate = coordinate + LongiLati[i] + " ";
-
                     }else{
-
                         coordinate = coordinate + LongiLati[i]
-
                     }
                 }
 
                 if(j < (geoValue.coordinates[0].length - 1 ) ){
-
                     coordinate = coordinate + ", ";
-
                 }
-
                 j++
             }
 
+            coordinate = coordinate +"))";
 
         }else if(geoValue.type == "Point"){
 
@@ -294,44 +282,28 @@ function makeSaveNewGeoInfoSql(str, tableName){
             var j = 0;
             for(LongiLati of geoValue.coordinates){
 
-                console.log(LongiLati);
-
                 if(j==0){
-    
                     coordinate = coordinate + LongiLati + " ";
-
                 }else{
-
                     coordinate = coordinate + LongiLati
-
                 }
                 j++
             }
-
-        }
-
-        
-        if(geoValue.type == "MultiPolygon"){
-
-            coordinate = coordinate +")))";
-
-        } else if(geoValue.type == "MultiLineString"){
-
-            coordinate = coordinate +"))";
-
-        } else if(geoValue.type == "Point"){
 
             coordinate = coordinate +")";
 
         }
 
-        if(makingQueryKey == "" || makingQueryValue == ""){
-            throw new Error("クエリの作成に失敗しました")
+        if(makingQuery[0] == null || makingQuery[1] == null){
+
+            queryAll = "INSERT INTO " + "\"" + tableName + "\" (" + geoKey +")" + "VALUES(" + "ST_Transform("+ "ST_GeomFromText(\'"+ coordinate + "\'"+ ",3857),4326"+  "))";
+            
+        } else {
+
+            queryAll = "INSERT INTO " + "\"" + tableName + "\" (" + makingQuery[0] + ", " + geoKey + ")" + "VALUES(" + makingQuery[1] + ", " + "ST_Transform("+ "ST_GeomFromText(\'"+ coordinate + "\'"+ ",3857),4326"+  "))";
+
         }
 
-        queryAll = "INSERT INTO " + "\"" + tableName + "\" (" + makingQueryKey + ", " + geoKey + ")" + "VALUES(" + makingQueryValue + ", " + "ST_Transform("+ "ST_GeomFromText(\'"+ coordinate + "\'"+ ",3857),4326"+  "))";
-
-        console.log(queryAll);
         return queryAll;
 
     }
@@ -342,11 +314,9 @@ function makeSaveNewGeoInfoSql(str, tableName){
         } else {
             errorText = "クエリの作成に失敗しました";
         }
-
         throw(errorText);
     }
 }
-
 
 //　サーバー通信実施処理
 function connect(str, res, query){
@@ -450,9 +420,7 @@ function resitCharNumLimit(key, value){
     
         } else if(key == "c23_007" && value.length > 5) {
             throw(e);
-    
         }
-
     }
     catch(e){
 
@@ -460,4 +428,53 @@ function resitCharNumLimit(key, value){
 
         throw(errorText);
     } 
+}
+
+function unionQuery(ope, str){
+
+    var makingQuery;
+    var makingQueryKey;
+    var makingQueryValue;
+
+    for (const [key, value] of Object.entries(str)) {
+        
+        resitCharNumLimit(key, value);
+
+        if(key != "tableName" && key != "geom"){
+            if(value != "" && value != null && typeof(value) == "string"){
+
+                if(ope == "update"){
+
+                    if(makingQuery == null){
+                        makingQuery = "SET " + key + "=" + "'" + value + "'"; 
+                    } else {
+                        makingQuery = makingQuery + ", " + key + "=" + "'" + value + "'"; 
+                    } 
+                }
+                
+                if(ope == "saveNewGeoInfo"){
+
+                    if(makingQueryKey == null && makingQueryValue == null){
+                        makingQueryKey = key; 
+                        makingQueryValue = "\'" + value + "\'";
+                    } else {
+                        makingQueryKey = makingQueryKey + ", " + key; 
+                        makingQueryValue = makingQueryValue + ", " + "\'"+  value + "\'"; 
+                    } 
+
+                }
+            }
+        }
+    }
+
+    if(ope == "saveNewGeoInfo"){
+
+        makingQuery = new Array()
+
+        makingQuery.push(makingQueryKey);
+        makingQuery.push(makingQueryValue);
+
+    }
+
+    return makingQuery;
 }
