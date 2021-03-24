@@ -5,10 +5,8 @@ var {Client} = require('pg');
 
 // pathモジュールをロードし、pathに代入
 const path = require('path');
-const { error } = require("console");
-const { nextTick } = require("process");
 const e = require("express");
-const { compilation } = require("webpack");
+
 
 // 2-1. listen()メソッドを実行して1234番ポートで待ち受け。
 var server = app.listen(1234, function(){
@@ -216,8 +214,6 @@ function makeSaveNewGeoInfoSql(ope, str, tableName){
 
             var j = 0;
             for(LongiLati of geoValue.coordinates[0]){
-
-                console.log(LongiLati);
 
                 for(var i = 0; i< 2; i++){
 

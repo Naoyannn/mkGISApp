@@ -190,7 +190,9 @@ function Main(){
         // 描画修正 
         if(chosenOpe == 'Modify'){
 
-          snap = new Snap({source: source});　
+          snap = new Snap({
+            source: porygonVectorSource, lineVectorSource, pointVectorSource,
+          });　
           map.addInteraction(snap);
 
         // ポイント　描画処理　
@@ -257,7 +259,12 @@ function Main(){
             // 属性データ　取得
             var selectedData = selectedShape.getFeatures();
 
-            var attributeData = selectedData.item(0).getProperties();
+            try{
+              var attributeData = selectedData.item(0).getProperties();
+            }
+            catch{
+              return;
+            }
 
             // Feature データチェック
             if(attributeData !== null){
@@ -663,7 +670,6 @@ $(function() {
       alert(e.message);
       console.error(e);
       return;
-
     }
   });
 });
