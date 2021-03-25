@@ -37,6 +37,12 @@ var porygonVectorSource;
 var lineVectorSource;
 var pointVectorSource;
 
+// 選択レイヤタイプ
+var typeSelect;
+
+// 描画、スナップ、移動　変数
+var draw, snap, translate, pointModify, lineModify, porygonModify; 
+
 // メイン処理
 function Main(){
 
@@ -161,224 +167,14 @@ function Main(){
         pointVector,
       ],
       view: view,
-    });
-
-    // 描画、スナップ、移動　変数
-    var draw, snap, translate;  
+    }); 
 
     // ドロップダウン　選択 
-    var typeSelect = document.getElementById('type');
-    
-    /// 描画編集 デフォに設定 
-    var pointModify = new Modify({source: pointVectorSource}); 
-    var lineModify = new Modify({source: lineVectorSource});
-    var porygonModify = new Modify({source: porygonVectorSource}); 
-
-    // ドロップダウン　選択・変更時に作動 
-    function addInteractions() {
-
-      // ドロップダウン　選択項目内容取得
-      var chosenOpe = typeSelect.value;
-      
-      if (chosenOpe !== 'MoveObj' && chosenOpe !== 'Delete' && chosenOpe !== 'Data') {  
-
-        // データ変更ボタン　非表示　
-        document.getElementById("botton").style.visibility = "hidden"; 
-
-        // データ情報　非表示　
-        document.getElementById('info').innerHTML = "";
-        
-        // 描画修正 
-        if(chosenOpe == 'Modify'){
-
-          snap = new Snap({
-            source: porygonVectorSource, lineVectorSource, pointVectorSource,
-          });　
-          map.addInteraction(snap);
-
-        // ポイント　描画処理　
-        } else　if(chosenOpe == 'Point') {
-
-          removeModify(pointModify, lineModify, porygonModify);
-
-          draw = new Draw({　
-            source: pointVectorSource,
-            type: 'Point',
-          });
-          map.addInteraction(draw);
-          
-          snap = new Snap({source: pointVectorSource});　
-          map.addInteraction(snap);
-
-        // ライン　描画処理　
-        } else if(chosenOpe == 'MultiLineString'){
-
-          removeModify(pointModify, lineModify, porygonModify);
-        
-          draw = new Draw({　
-            source: lineVectorSource,
-            type: 'MultiLineString',
-          });
-          map.addInteraction(draw);
-          
-          snap = new Snap({source: lineVectorSource});　
-          map.addInteraction(snap);
-  
-        //　ポリゴン　描画処理
-        } else if(chosenOpe == 'MultiPolygon'){
-
-          removeModify(pointModify, lineModify, porygonModify);
-          
-          draw = new Draw({　
-            source: porygonVectorSource,
-            type: 'MultiPolygon',
-          });
-          map.addInteraction(draw);
-          
-          snap = new Snap({source: porygonVectorSource});　
-          map.addInteraction(snap);
-
-        }
-
-      }else {
-
-        removeModify(pointModify, lineModify, porygonModify);
-
-        // 図形の選択　
-        selectedShape = new Select({
-          condition: click,
-        });
-        map.addInteraction(selectedShape);
-
-        // 属性データ　表示　変更処理
-        if(chosenOpe == 'Data'){
-
-          selectedShape.on('select', function (e) {
-
-            selectedGeoKeyList  = new Array()
-
-            // 属性データ　取得
-            var selectedData = selectedShape.getFeatures();
-
-            try{
-              var attributeData = selectedData.item(0).getProperties();
-            }
-            catch{
-              return;
-            }
-
-            // Feature データチェック
-            if(attributeData !== null){
-
-              if(Object.keys(attributeData).length > 1){
-
-                 // 表示HTML（全文）変数 
-                var fullHtml = ''; 
-                var i = 0;
-                for (const [key, value] of Object.entries(attributeData)) { 
-
-                  if(i === 0){
-                    i++;
-                    continue;
-                  } else {
-
-                    // 入力可能文字数表示（idによって文字数を変更）
-                    var limitcharNum = limitCharNum(key);
-
-                    /// 属性情報表示　HTML作成（1行） 
-                    var html ="（" +limitcharNum+  "）<input type=\"text\" id=\"" + key +"\" name=\"" + key +"\" class = \"input\"　>"
-                    selectedGeoKeyList.push(key);
-                    
-                    // 属性情報表示　HTML作成（全文） 
-                    fullHtml = fullHtml + (`${key}: ${value}` + html + '<br>');
-                  }
-                } 
-
-                // 属性情報表示 
-                document.getElementById('info').innerHTML = fullHtml;
-
-                // 属性情報　編集ボタン表示 
-                document.getElementById("botton").style.visibility = "visible"; 
-
-              } else {
-                
-                fullHtml = makeNewFeatureInfo(attributeData);
-
-                // 属性情報入力欄表示
-                document.getElementById('info').innerHTML = fullHtml;
-
-                // 属性情報　編集ボタン表示 
-                document.getElementById("botton").style.visibility = "visible"; 
-
-              }
-
-            } else {
-
-              throw(e);
-
-            }
-          });
-
-        // 図形　移動処理 
-        }else if(chosenOpe == 'MoveObj'){
-
-          noShowFeatureInfo();
-
-          // 図形移動 
-          translate = new Translate({
-            features: selectedShape.getFeatures()
-          });
-
-          map.addInteraction(translate);
-
-        // 描画図形　削除処理 
-        } else if(chosenOpe == 'Delete'){ 
-
-          noShowFeatureInfo();
-          // 描画削除
-          selectedShape.getFeatures().on('add', function(feature){
-
-            var selectedData = selectedShape.getFeatures();
-
-            var attributeData = selectedData.item(0).getProperties();  
-
-            if(Object.keys(attributeData).length > 1){
-
-              alert("DBに登録されている図形です。図形情報削除ボタンで削除してください");
-              selectedData.clear();
-              return;
-            }
-
-            var alertResult = confirm("描画を削除しますか？");
-
-            if(alertResult){
-
-              selectedShape.getLayer(feature.element).getSource().removeFeature(feature.element);
-              feature.target.remove(feature.element);
-              selectedData.clear();
-              var alertResult = confirm("描画を削除しました。");
-
-            } else {
-
-              alert("描画を中止しました。");
-              selectedData.clear();
-              return;
-
-            }
-          });
-        }
-      }
-    }
+    typeSelect = document.getElementById('type');
 
     // ドロップダウンリスト　選択時　実行処理
     typeSelect.onchange = function () {
-      map.addInteraction(pointModify);
-      map.addInteraction(lineModify);
-      map.addInteraction(porygonModify);
-      map.removeInteraction(draw);
-      map.removeInteraction(snap);
-      map.removeInteraction(selectedShape);
-      map.removeInteraction(translate);
+      removeInteraction();
       addInteractions();
     };
 
@@ -392,16 +188,200 @@ function Main(){
   }
 };
 
-//　画面ロード時　実行処理
-window.onload = () => {
+// ドロップダウン　選択・変更時に作動 
+function addInteractions() {
 
-  Main();
+  // ドロップダウン　選択項目内容取得
+  var chosenOpe = typeSelect.value;
   
+  if (chosenOpe !== 'MoveObj' && chosenOpe !== 'Delete' && chosenOpe !== 'Data') {  
+
+    // データ変更ボタン　非表示　
+    document.getElementById("botton").style.visibility = "hidden"; 
+
+    // データ情報　非表示　
+    document.getElementById('info').innerHTML = "";
+    
+    // 描画修正 
+    if(chosenOpe == 'Modify'){
+      // 描画編集 デフォに設定 
+      pointModify = new Modify({source: pointVectorSource}); 
+      lineModify = new Modify({source: lineVectorSource});
+      porygonModify = new Modify({source: porygonVectorSource}); 
+      map.addInteraction(pointModify);
+      map.addInteraction(lineModify);
+      map.addInteraction(porygonModify);
+
+      snap = new Snap({
+        source: porygonVectorSource, lineVectorSource, pointVectorSource,
+      });　
+      map.addInteraction(snap);
+
+    // ポイント　描画処理　
+    } else　if(chosenOpe == 'Point') {
+
+      draw = new Draw({　
+        source: pointVectorSource,
+        type: 'Point',
+      });
+      map.addInteraction(draw);
+      
+      snap = new Snap({source: pointVectorSource});　
+      map.addInteraction(snap);
+
+    // ライン　描画処理　
+    } else if(chosenOpe == 'MultiLineString'){
+    
+      draw = new Draw({　
+        source: lineVectorSource,
+        type: 'MultiLineString',
+      });
+      map.addInteraction(draw);
+      
+      snap = new Snap({source: lineVectorSource});　
+      map.addInteraction(snap);
+
+    //　ポリゴン　描画処理
+    } else if(chosenOpe == 'MultiPolygon'){
+      
+      draw = new Draw({　
+        source: porygonVectorSource,
+        type: 'MultiPolygon',
+      });
+      map.addInteraction(draw);
+      
+      snap = new Snap({source: porygonVectorSource});　
+      map.addInteraction(snap);
+
+    }
+
+  }else {
+
+    // 図形の選択　
+    selectedShape = new Select({
+      condition: click,
+    });
+    map.addInteraction(selectedShape);
+
+    // 属性データ　表示　変更処理
+    if(chosenOpe == 'Data'){
+
+      selectedShape.on('select', function (e) {
+
+        selectedGeoKeyList  = new Array()
+
+        // 属性データ　取得
+        var selectedData = selectedShape.getFeatures();
+
+        var attributeData;
+
+        if(selectedData.item(0) != null){
+          // Feature データチェック
+          if(selectedData.item(0).getProperties() != null){
+            attributeData = selectedData.item(0).getProperties();
+            if(Object.keys(attributeData).length > 1){
+
+                // 表示HTML（全文）変数 
+              var fullHtml = ''; 
+              var i = 0;
+              for (const [key, value] of Object.entries(attributeData)) { 
+  
+                if(i === 0){
+                  i++;
+                  continue;
+                } else {
+  
+                  // 入力可能文字数表示（idによって文字数を変更）
+                  var limitcharNum = limitCharNum(key);
+  
+                  /// 属性情報表示　HTML作成（1行） 
+                  var html ="（" +limitcharNum+  "）<input type=\"text\" id=\"" + key +"\" name=\"" + key +"\" class = \"input\"　>"
+                  selectedGeoKeyList.push(key);
+                  
+                  // 属性情報表示　HTML作成（全文） 
+                  fullHtml = fullHtml + (`${key}: ${value}` + html + '<br>');
+                }
+              } 
+  
+              // 属性情報表示 
+              document.getElementById('info').innerHTML = fullHtml;
+  
+              // 属性情報　編集ボタン表示 
+              document.getElementById("botton").style.visibility = "visible"; 
+  
+            } else {
+              
+              fullHtml = makeNewFeatureInfo(attributeData);
+  
+              // 属性情報入力欄表示
+              document.getElementById('info').innerHTML = fullHtml;
+  
+              // 属性情報　編集ボタン表示 
+              document.getElementById("botton").style.visibility = "visible"; 
+  
+            }
+          }
+          
+        } else {
+          selectedData.clear();
+          noShowFeatureInfo();
+        }
+      });
+
+    // 図形　移動処理 
+    }else if(chosenOpe == 'MoveObj'){
+
+      noShowFeatureInfo();
+
+      // 図形移動 
+      translate = new Translate({
+        features: selectedShape.getFeatures()
+      });
+
+      map.addInteraction(translate);
+
+    // 描画図形　削除処理 
+    } else if(chosenOpe == 'Delete'){ 
+
+      noShowFeatureInfo();
+      // 描画削除
+      selectedShape.getFeatures().on('add', function(feature){
+
+        // データ選択
+        var selectedData = selectedShape.getFeatures();
+        var attributeData = selectedData.item(0).getProperties();  
+
+        if(Object.keys(attributeData).length > 1){
+
+          alert("DBに登録されている図形です。図形情報削除ボタンで削除してください");
+          selectedData.clear();
+          return;
+        }
+
+        var alertResult = confirm("描画を削除しますか？");
+
+        if(alertResult){
+
+          selectedShape.getLayer(feature.element).getSource().removeFeature(feature.element);
+          feature.target.remove(feature.element);
+          selectedData.clear();
+          var alertResult = confirm("描画を削除しました。");
+
+        } else {
+
+          alert("描画を中止しました。");
+          selectedData.clear();
+          return;
+
+        }
+      });
+    }
+  }
 }
 
 // レイヤ表示切り替え 処理
 $(function() {
-  
+      
   // チェックボックス操作時　実行　
   $('input[name="checkbox"]').on('change',function() {
     try{
@@ -411,6 +391,7 @@ $(function() {
       var lineFlg = $('#line').prop('checked');
       var pointFlg = $('#point').prop('checked');
 
+      // レイヤを取得
       var layer = map.getLayers();
 
       if(layer == null){
@@ -425,10 +406,10 @@ $(function() {
         if (layerTitle == "porygon"){
 
           if(polygonFlg == false){
-            
-            layer.setVisible(false);
-            $("#MultiPolygon").prop('disabled', true).addClass('disabled');
-            noShowFeatureInfo();
+
+            var type = "MultiPolygon";
+            unselectCheckBoxt(layer, type, selectedShape, typeSelect);
+
           } else {
             layer.setVisible(true);
             $("#MultiPolygon").prop('disabled', false).removeClass('disabled'); 
@@ -438,9 +419,9 @@ $(function() {
         } else if (layerTitle == "line") {
 
           if(lineFlg == false){
-            layer.setVisible(false);
-            $("#MultiLineString").prop('disabled', true).addClass('disabled');
-            noShowFeatureInfo();
+            var type = "MultiLineString";
+            unselectCheckBoxt(layer, type, selectedShape, typeSelect);
+
           }else {
             layer.setVisible(true);
             $("#MultiLineString").prop('disabled', false).removeClass('disabled'); 
@@ -450,9 +431,10 @@ $(function() {
         } else if (layerTitle == "point"){
 
           if(pointFlg == false){
-            layer.setVisible(false);
-            $("#Point").prop('disabled', true).addClass('disabled');
-            noShowFeatureInfo();
+
+            var type = "Point";
+            unselectCheckBoxt(layer, type, selectedShape, typeSelect);
+
           }else {
             layer.setVisible(true);
             $("#Point").prop('disabled', false).removeClass('disabled'); 
@@ -463,6 +445,7 @@ $(function() {
           return;
         } 
       });
+
       if(polygonFlg === false && lineFlg === false && pointFlg === false){
 
         $("#type").prop("selectedIndex", 0);
@@ -470,6 +453,7 @@ $(function() {
         $("#MoveObj").prop('disabled', true).addClass('disabled');
         $("#Modify").prop('disabled', true).addClass('disabled');
         $("#Delete").prop('disabled', true).addClass('disabled');
+        removeInteraction();
         
       } else {
         $("#Data").prop('disabled', false).removeClass('disabled'); 
@@ -489,6 +473,45 @@ $(function() {
   });
 });
 
+
+//　チェックボックス未選択時　選択解除
+function unselectCheckBoxt(layer, type, selectedShape, typeSelect){
+
+  if(selectedShape != null){
+    if(selectedShape.getFeatures() != null){
+      if(selectedShape.getFeatures().item(0) != null){
+        if(selectedShape.getFeatures().item(0).getProperties() != null){
+          var selectedType = selectedShape.getFeatures().item(0).getProperties().geometry.constructor.name;
+          if (selectedType == type){
+            selectedShape.getFeatures().clear();
+            noShowFeatureInfo();
+          }
+        }
+      }
+    }
+  }
+
+  layer.setVisible(false);
+  $("#"+type).prop('disabled', true).addClass('disabled');
+  if(typeSelect.value == type){
+    $("#type").prop("selectedIndex", 0);
+    map.removeInteraction(draw);
+  }
+}
+
+// マップインタラクション解除
+function removeInteraction(){
+
+  map.removeInteraction(pointModify);
+  map.removeInteraction(lineModify);
+  map.removeInteraction(porygonModify);
+  map.removeInteraction(draw);
+  map.removeInteraction(snap);
+  map.removeInteraction(selectedShape);
+  map.removeInteraction(translate);
+
+}
+
 //　属性情報変更　処理
 $(function() {
   $('#editFeatureInfo').on('click', function() {
@@ -505,12 +528,12 @@ $(function() {
       // 選択中　属性情報　id・テーブル名取得 
       var data = features.item(0);
       if(data == null){
-        throw new Error("属性情報が存在しません");
+        throw("属性情報が存在しません");
       }
   
       if(data.getId() == null || data.getId() ==""){
 
-        throw new Error("DBに元データが存在しません。図形を新規登録して下さい")
+        throw("DBに元データが存在しません。図形を新規登録して下さい")
 
       } else {
 
@@ -556,17 +579,15 @@ $(function() {
         }).success(function(data) {
 
           alert('データの上書きが完了しました。');
-
+          refreshSource();
           // 属性情報・図形情報更新処理後　属性情報再表示処理
           viewAfUpdate(features, data, originalData)
 
         // ajax　処理失敗 
-        }).error(function(XMLHttpRequest, textStatus, errorThrown) {
+        }).error(function(XMLHttpRequest) {
 
+          alert(XMLHttpRequest.responseText);
           alert('上書きが失敗しました。');
-          console.log("XMLHttpRequest : " + XMLHttpRequest.status);
-          console.log("textStatus     : " + textStatus);
-          console.log("errorThrown    : " + errorThrown.message); 
           return;  
           
         });
@@ -641,18 +662,12 @@ $(function() {
           alert('データを削除しました');
           noShowFeatureInfo();
           features.clear();
-          porygonVectorSource.refresh();
-          lineVectorSource.refresh();
-          pointVectorSource.refresh();
-          return;
+          refreshSource()
 
         // ajax 処理失敗 
-        }).error(function(XMLHttpRequest, textStatus, errorThrown) {
+        }).error(function(XMLHttpRequest) {
           alert(XMLHttpRequest.responseText);
           alert('データの削除に失敗しました');
-          console.log("XMLHttpRequest : " + XMLHttpRequest.status);
-          console.log("textStatus     : " + textStatus);
-          console.log("errorThrown    : " + errorThrown.message);
           return;
         });
 
@@ -669,7 +684,6 @@ $(function() {
     }
   });
 });
-
 
 //　図形新規登録　処理
 $(function() {
@@ -694,11 +708,12 @@ $(function() {
       }
    
       // レイヤタイプによって、保存先テーブル名を決定
+    
       if (layerType == "MultiPolygon"){
 
         tableName = "n03-200101_27-g_administrativeboundary";
   
-      } else if (layerType == "MultiLineString") {
+      } else if (layerType == "MultiLineString"){
 
         tableName = "c23-06_27-g_coastline"
   
@@ -747,16 +762,14 @@ $(function() {
 
           alert('新規保存が完了しました。');
           noShowFeatureInfo();
+          refreshSource()
           features.clear();
 
         // ajax　処理失敗 
-        }).error(function(XMLHttpRequest, textStatus, errorThrown, body, responseText) {
+        }).error(function(XMLHttpRequest) {
 
           alert(XMLHttpRequest.responseText);
           alert('新規登録が失敗しました。');
-          console.log("XMLHttpRequest : " + XMLHttpRequest.status);
-          console.log("textStatus     : " + textStatus);
-          console.log("errorThrown    : " + errorThrown.message); 
           return;  
           
         });
@@ -862,19 +875,14 @@ $(function() {
 
           alert('図形情報更新が完了しました。')
           noShowFeatureInfo();
+          refreshSource()
           features.clear();
-          porygonVectorSource.refresh();
-          lineVectorSource.refresh();
-          pointVectorSource.refresh();
 
         // ajax　処理失敗 
-        }).error(function(XMLHttpRequest, textStatus, errorThrown) {
+        }).error(function(XMLHttpRequest) {
 
           alert(XMLHttpRequest.responseText);
           alert('図形情報更新が失敗しました。');
-          console.log("XMLHttpRequest : " + XMLHttpRequest.status);
-          console.log("textStatus     : " + textStatus);
-          console.log("errorThrown    : " + errorThrown.message); 
           return;
           
         });
@@ -892,15 +900,6 @@ $(function() {
     }
   });
 });
-
-// デフォルト設定を切断　メソッド
-function removeModify(point,line, porygon){
-
-  map.removeInteraction(point);
-  map.removeInteraction(line);
-  map.removeInteraction(porygon);
-
-};
 
 // 属性情報　非表示　メソッド
 function noShowFeatureInfo(){
@@ -1013,10 +1012,17 @@ function viewAfUpdate(features, data, originalData){
     }
   }
   document.getElementById('info').innerHTML = fullHtml;
+  refreshSource();
+}
+
+// デフォルト設定を切断　メソッド
+function refreshSource(){
+
   porygonVectorSource.refresh();
   lineVectorSource.refresh();
   pointVectorSource.refresh();
-}
+
+};
 
 // 文字制限表示　メソッド
 function limitCharNum(id){
@@ -1112,7 +1118,6 @@ function checkCharNum(id, count){
   try{
 
     // 文字数バリデーション
-    
     if(id == null){    
 
       throw('保存先Keyが存在しません');
@@ -1272,7 +1277,6 @@ function checkCharNum(id, count){
   }
 }
 
-
 // 属性情報　編集　バリデーション　処理 
 $(function(){
 
@@ -1430,3 +1434,10 @@ $(function(){
     }  
   });
 });
+
+//　画面ロード時　実行処理
+window.onload = () => {
+
+  Main();
+  
+}
